@@ -1,4 +1,3 @@
-.settinngs/
+.*
+!/.gitignore
 target/
-.classpath
-.project
