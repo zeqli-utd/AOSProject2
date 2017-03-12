@@ -24,6 +24,7 @@ public class Linker {
 		this.out = new ObjectOutputStream[numProc];
 		this.in = new ObjectInputStream[numProc];
 		this.connector = new Connector();
+		this.neighbors = neighbors;
 	}
 	
 	public void buildChannels(int listenPort) throws Exception{
