@@ -42,7 +42,7 @@ public class Connector {
 		}
 		
 		/* Contact all the bigger process*/
-		while(i < neighbors.size()){
+		while(i > neighbors.size()){
 			Node process = neighbors.get(i);
 			link[i] = new Socket(process.getHostName(), process.getPort());
 			out[i] = new ObjectOutputStream(link[i].getOutputStream());
