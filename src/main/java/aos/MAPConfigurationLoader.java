@@ -13,20 +13,20 @@ import java.util.List;
 import java.util.Map;
 
 public class MAPConfigurationLoader implements ConfigurationLoader {
-	
-	public void loadConfig(String relativePath, int myId, Protocol proto){
-		Path file = Paths.get(relativePath).toAbsolutePath();
-		
-		// System.out.println(file.toString());
-		loadConfigFromAbs(file.toString(), myId, proto);
-	}
+    
+    public void loadConfig(String relativePath, int myId, Protocol proto){
+        Path file = Paths.get(relativePath).toAbsolutePath();
+        
+        // System.out.println(file.toString());
+        loadConfigFromAbs(file.toString(), myId, proto);
+    }
 
-	public void loadConfigFromAbs(String absolutePath, int myId, Protocol proto) {
-		Map<GlobalParams, Integer> globalParams= new EnumMap<>(GlobalParams.class);
-		List<Node> hosts = new LinkedList<>();
-		List<Node> neighbors = new LinkedList<>();
-		Path file = Paths.get(absolutePath);
-		
+    public void loadConfigFromAbs(String absolutePath, int myId, Protocol proto) {
+        Map<GlobalParams, Integer> globalParams= new EnumMap<>(GlobalParams.class);
+        List<Node> hosts = new LinkedList<>();
+        List<Node> neighbors = new LinkedList<>();
+        Path file = Paths.get(absolutePath);
+        
         Charset charset = Charset.forName("UTF-8");
         try (BufferedReader reader = Files.newBufferedReader(file, charset)) {
             String line = null;
@@ -38,10 +38,10 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                     continue;
                 String[] params = line.split("\\s+");
                 for(int i = 0; i < params.length; i++){
-                	int value = Integer.parseInt(params[i]);
-                	GlobalParams key = GlobalParams.values()[i];
-                	globalParams.put(key, value);
-                	// System.out.println(String.format("Global parameter (%s, %d) added", key, value));
+                    int value = Integer.parseInt(params[i]);
+                    GlobalParams key = GlobalParams.values()[i];
+                    globalParams.put(key, value);
+                    // System.out.println(String.format("Global parameter (%s, %d) added", key, value));
                 }
                 break;
             }
@@ -60,7 +60,7 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 
                 // hostInfo[0] - node id, hostInfo[1] - host addr, hostInfo[2] - host port
                 Node host = new Node(Integer.parseInt(hostInfo[0]), hostInfo[1] + ".utdallas.edu", hostInfo[2]);
-				hosts.add(host);
+                hosts.add(host);
                 n--;
             }
             if(n != 0){
@@ -98,12 +98,12 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
         } catch (NullPointerException e){
             System.err.println(e.getMessage());
         }
-	}
-	
-	public void doConfigure(Protocol proto, Map<GlobalParams, Integer> globalParams, List<Node> neighbors){
-		Collections.sort(neighbors);
+    }
+    
+    public void doConfigure(Protocol proto, Map<GlobalParams, Integer> globalParams, List<Node> neighbors){
+        Collections.sort(neighbors);
         proto.setNeighbors(neighbors);
         proto.setGlobalParams(globalParams);
-	}
+    }
 
 }

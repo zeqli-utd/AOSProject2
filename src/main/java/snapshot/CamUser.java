@@ -6,5 +6,5 @@ import aos.MessageHandler;
 //Thus, the application is required to implement the method localState,
 //which records the local state of the application whenever invoked.
 public interface CamUser extends MessageHandler {
-	void localState();
+    void localState();
 }

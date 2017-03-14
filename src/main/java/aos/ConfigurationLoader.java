@@ -6,6 +6,6 @@ package aos;
  *
  */
 public interface ConfigurationLoader {
-	void loadConfig(String relativePath, int myId, Protocol proto);
-	void loadConfigFromAbs(String absolutePath, int myId, Protocol proto);
+    void loadConfig(String relativePath, int myId, Protocol proto);
+    void loadConfigFromAbs(String absolutePath, int myId, Protocol proto);
 }

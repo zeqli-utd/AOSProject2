@@ -5,5 +5,5 @@ import aos.MessageHandler;
 //which records a consistent global state of the system
 
 public interface Camera extends MessageHandler{
-	void globalState();
+    void globalState();
 }

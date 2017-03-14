@@ -17,7 +17,7 @@ public class Node implements Comparable<Node>{
     }
     
     public Node (int index){
-    	this.id = index;
+        this.id = index;
     }
 
     public int getNodeId(){
@@ -37,8 +37,8 @@ public class Node implements Comparable<Node>{
         return String.format("[index = %d] [host = %s] [port = %s]", id, hostName, port);
     }
 
-	@Override
-	public int compareTo(Node other) {
-		return Integer.compare(id, other.getNodeId());
-	}
+    @Override
+    public int compareTo(Node other) {
+        return Integer.compare(id, other.getNodeId());
+    }
 }

@@ -6,8 +6,8 @@ package aos;
  *
  */
 public class MAP extends Protocol{
-	
-	protected MAP(int myId, String name){
-		super(myId, name);
-	}
+    
+    protected MAP(int myId, String name){
+        super(myId, name);
+    }
 }
