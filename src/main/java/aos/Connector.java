@@ -80,7 +80,7 @@ public class Connector {
 		System.out.println(String.format("[Node %d] accepted finished", myId));
 		
 		/* Contact all the bigger process*/
-		while(numRecved < processes.size()-1){
+		while(numRecved < processes.size()){
 			Node process = processes.get(numRecved);
 			int dstId = process.getNodeId();
 			String host = process.getHostName();
