@@ -47,7 +47,7 @@ public class RecvCamera extends Process implements Camera {
 	
 	@Override
 	// the method handleMessage gives the rule for receiving a marker message
-	public void handleMessage(Message m, int srcId, Tag tag) {  
+	public void handleMessage(Message m, int srcId, Tag tag) throws IOException {  
 		if(tag.equals(Tag.MARKER)){      
 			if(myColor == WHITE)    // if the process is white, it turns red by involking globalState()
 				globalState();
@@ -62,7 +62,7 @@ public class RecvCamera extends Process implements Camera {
 			} else { // handle application message, true if the application message is of type wr
 				if(myColor == RED && !closed[srcId])
 					channels.get(srcId).add(m);
-				app.handleMessage(m, srcId, tag); // give it to app
+				app.handleMessage(m, srcId, tag);
 			}
 		}
 

@@ -2,9 +2,12 @@ package aos;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Collections;
 import java.util.List;
+
 
 /**
  * A collection of accept sockets for maintaining channels
@@ -15,53 +18,122 @@ public class Connector {
 	ServerSocket listener;
 	Socket[] link;
 	
+	private static volatile Connector instance = null;
 	
-	public Connector() {
+	private Connector(){
 	}
+	
+	public static Connector getInstance() {
+		// Double checking lock for thread safe.
+		if(instance == null){
+			synchronized (Connector.class) {
+				if(instance == null){
+					instance = new Connector();
+				}
+			}
+		}
+		return instance;
+	}
+	
 
-
-	public void connect(int listenPort, int myId, ObjectInputStream[] in, ObjectOutputStream[] out, List<Node> neighbors) throws Exception{
-		int numProc = neighbors.size();
+	/**
+	 * Caveat: processes must be sorted
+	 * 
+	 * @param listenPort
+	 * @param myId
+	 * @param in
+	 * @param out
+	 * @param processes Sorted list of nodes containing nodeId, host address, and port.
+	 * @throws Exception
+	 */
+	public void connect(int listenPort, int myId, ObjectInputStream[] in, ObjectOutputStream[] out, List<Node> processes) throws Exception{
+		int numProc = processes.size();
 		link = new Socket[numProc];
 		listener = new ServerSocket(listenPort);
 		
 		/* Accept connections from all the smaller processes */
-		int i = 0;
-		while(i < neighbors.size() && neighbors.get(i).getNodeId() < myId){
+		int numRecved = 0;
+		System.out.println(processes);
+		while(numRecved < processes.size() && processes.get(numRecved).getNodeId() < myId){
+            System.out.println(String.format("[Node %d] numRecved %d, nodeId %d",  myId, numRecved, processes.get(numRecved).getNodeId()));
 			Socket socket = listener.accept();
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             
+            // Read the first message from new request.
             Message msg = (Message)ois.readObject();
+            System.out.println(String.format("[Node %d] receive message, %s", myId, msg.toString()));
+            
             int fromId = msg.getSrcId();
+    		int fromIndex = Collections.binarySearch(processes, new Node(fromId));
             if(msg.getTag().equals(Tag.HANDSHAKE)){
-            	link[fromId] = socket;  
-            	in[fromId] = ois;
-            	out[fromId] = new ObjectOutputStream(socket.getOutputStream());
-                i++;
+            	link[fromIndex] = socket;  
+            	in[fromIndex] = ois;
+            	out[fromIndex] = new ObjectOutputStream(socket.getOutputStream());
+
+    			int src = myId, dst = fromId;
+    			msg = new Message(src, dst, Tag.HANDSHAKE, "Response");
+            	out[fromIndex].writeObject(msg);
+            	
+                numRecved++;
             }
 		}
+		System.out.println(String.format("[Node %d] accepted finished", myId));
 		
 		/* Contact all the bigger process*/
-		while(i > neighbors.size()){
-			Node process = neighbors.get(i);
-			link[i] = new Socket(process.getHostName(), process.getPort());
-			out[i] = new ObjectOutputStream(link[i].getOutputStream());
-			in[i] = new ObjectInputStream(link[i].getInputStream());
+		while(numRecved < processes.size()-1){
+			Node process = processes.get(numRecved);
+			int dstId = process.getNodeId();
+			String host = process.getHostName();
+			int port = process.getPort();
+
+    		int dstIndex = Collections.binarySearch(processes, new Node(dstId));
+			
+			boolean connected = false;
+			while(!connected){
+				try{ 
+					System.out.println(String.format("[Node %d] Connect to %s:%d", myId, host, port));
+					link[dstIndex] = new Socket(host, port);
+					connected = true;
+				} catch (ConnectException e){
+					System.out.println(String.format("[Node %d] Connection fail: %s", myId, e.toString()));
+					Thread.sleep(1000);
+					System.out.println(String.format("[Node %d] Retry connecting...", myId));
+				}
+			}
+			System.out.println(String.format("[Node %d] Connection success! to %s:%d", myId, host, port));
+			
+			out[dstIndex] = new ObjectOutputStream(link[dstIndex].getOutputStream());
 			
 			/* Send a handshake message to P_i */
-			out[i].writeObject(new Message(myId, process.getNodeId(), Tag.HANDSHAKE, ""));
-            i++;
+			int src = myId, dst = process.getNodeId();
+			Message msg = new Message(src, dst, Tag.HANDSHAKE, "Request");
+			out[dstIndex].writeObject(msg);
+			out[dstIndex].flush();
+
+			// ObjectInputStream constructor will block until the header has been read.  
+			in[dstIndex] = new ObjectInputStream(link[dstIndex].getInputStream());
+			msg = (Message)in[dstIndex].readObject();
+			if(msg.getTag().equals(Tag.HANDSHAKE)){
+				System.out.println(String.format("[Node %d] InputStream Setup Success! ", myId));
+            }
+			System.out.println(String.format("[Node %d], send msg, %s", myId, msg.toString()));
+            numRecved++;
 		}
+
+		System.out.println(String.format("[Node %d] build channel finished", myId));
 		
 	}
 	
 	
 	/**
 	 * Close all connection to this node.
+	 * 
 	 */
 	public void closeSockets(){
 		try{
 			listener.close();
+			
+			//TODO: May cause io exception.
 			for(int i = 0; i < link.length; i++){
 				link[i].close();
 			}

@@ -1,8 +1,6 @@
 package aos;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /**
  * 
@@ -31,15 +29,37 @@ public class Server {
 		configLoader.loadConfig(relativePath, myId, proto);
 		try {
 			Linker linker = new Linker(myId, proto.getNeighbors());
+			
+			// Make sure 
+			// 1. system properties are set properly
+			// 2. neighbor list is sorted
+			System.out.println(proto.toString());
 			linker.buildChannels(port);
+
+			// Bug. Dont uncomment this.
+//			int numSent = 0, numRecved = 0, numProc = linker.getNeighbors().size();
+//			linker.multicast(linker.getNeighbors(), Tag.APP, "Test");
+//			
+//			for (Node node : linker.getNeighbors()){
+//				int nodeId = node.getNodeId();
+//				linker.receiveMessage(nodeId);
+//			}
+//			
+//			Thread.sleep(20000);
+//			
+//			System.out.println("close");
+//			linker.close();
+			
+			
+			
 			
 			/* Use thread pools to manage process behaviors */
-			ExecutorService executorService = new ScheduledThreadPoolExecutor(proto.getNumProc()); 
+			/*ExecutorService executorService = Executors.newFixedThreadPool(50);
 			for(int i = 0; i < proto.getNumProc(); i++){
 				Process proc = new Process(linker);
 				Runnable task = new ListenerThread(i, proc);
 				executorService.submit(task);
-			}
+			}*/
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

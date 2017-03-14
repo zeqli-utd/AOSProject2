@@ -28,9 +28,9 @@ public class Message implements Serializable{
      */
     public Message(int srcId, int dst, String content){
         this.srcId = srcId;
-        this.dstId = -1;
+        this.dstId = dst;
         this.tag = Tag.APP;
-        this.content = "";
+        this.content = content;
     }
     
     /**
@@ -91,8 +91,8 @@ public class Message implements Serializable{
 	@Override 
     public String toString(){
 //		if(tag.equals("vector"))
-		return String.format("[%s] SOURCE = %d DST = %d \"%s\"", 
-        		tag, this.srcId, this.dstId, Arrays.toString(v));
+		return String.format("[%s] SOURCE = %d DST = %d CONTENT = \"%s\" VECTOR = \"%s\"", 
+        		tag, this.srcId, this.dstId, this.content, Arrays.toString(v));
     }
 
 

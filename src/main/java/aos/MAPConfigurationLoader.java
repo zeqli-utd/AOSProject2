@@ -16,7 +16,8 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
 	
 	public void loadConfig(String relativePath, int myId, Protocol proto){
 		Path file = Paths.get(relativePath).toAbsolutePath();
-		System.out.println(file.toString());
+		
+		// System.out.println(file.toString());
 		loadConfigFromAbs(file.toString(), myId, proto);
 	}
 
@@ -40,7 +41,7 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 	int value = Integer.parseInt(params[i]);
                 	GlobalParams key = GlobalParams.values()[i];
                 	globalParams.put(key, value);
-                	System.out.println(String.format("Global parameter (%s, %d) added", key, value));
+                	// System.out.println(String.format("Global parameter (%s, %d) added", key, value));
                 }
                 break;
             }

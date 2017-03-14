@@ -15,6 +15,10 @@ public class Node implements Comparable<Node>{
         this.hostName = hostName;
         this.port = port;
     }
+    
+    public Node (int index){
+    	this.id = index;
+    }
 
     public int getNodeId(){
         return id;

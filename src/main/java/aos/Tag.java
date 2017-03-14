@@ -10,5 +10,11 @@ public enum Tag {
 	SETUP,
 	MARKER,
 	APP,
-	HANDSHAKE;
+	HANDSHAKE,
+	
+	// Message to construct spanning tree. 
+	// A Tree message must be either Invite, Accept, or Reject 
+	TREE_INVITE,
+	TREE_ACCEPT,
+	TREE_REJECT;
 }

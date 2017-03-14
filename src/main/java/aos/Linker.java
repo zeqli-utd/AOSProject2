@@ -3,6 +3,7 @@ package aos;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -23,7 +24,7 @@ public class Linker {
 		this.numProc = neighbors.size();
 		this.out = new ObjectOutputStream[numProc];
 		this.in = new ObjectInputStream[numProc];
-		this.connector = new Connector();
+		this.connector = Connector.getInstance();
 		this.neighbors = neighbors;
 	}
 	
@@ -32,7 +33,8 @@ public class Linker {
 	}
 	
 	public void sendMessage(int dstId, Tag tag, String content) throws IOException{
-		out[dstId].writeObject(new Message(myId, dstId, tag, content));
+		int dstIndex = Collections.binarySearch(neighbors, new Node(dstId));
+		out[dstIndex].writeObject(new Message(myId, dstId, tag, content));
 	}
 	
 	public void multicast(List<Node> destinations, Tag tag, String content) throws IOException{
@@ -42,8 +44,9 @@ public class Linker {
 	}
 		
 	public Message receiveMessage(int fromId) throws IOException, ClassNotFoundException {
-		Message msg = (Message)in[fromId].readObject();
-		System.out.println(" Received message " + msg.toString());
+		int fromIndex = Collections.binarySearch(neighbors, new Node(fromId));
+		Message msg = (Message)in[fromIndex].readObject();                       // If no message, then blocking
+		System.out.println(String.format("[Node %d], recv, content=%s", myId, msg.toString()));
 		return msg;
 	}
 	
