@@ -96,7 +96,7 @@ public class Connector {
                     connected = true;
                 } catch (ConnectException e){
                     System.out.println(String.format("[Node %d] [Connect:Phase 2] Connection fail: %s", myId, e.toString()));
-                    Thread.sleep(1000);
+                    Thread.sleep(1000);          // Wait 1s to resent
                     System.out.println(String.format("[Node %d] [Connect:Phase 2] Retry connecting...", myId));
                 }
             }

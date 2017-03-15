@@ -48,7 +48,7 @@ public class Linker {
      * @param content Message body
      * @throws IOException 
      */
-    public void sendMessage(int dstId, Tag tag, String content) throws IOException{
+    public synchronized void sendMessage(int dstId, Tag tag, String content) throws IOException{
         int dstIndex = idToIndex(dstId);
         out[dstIndex].writeObject(new Message(myId, dstId, tag, content));
     }
@@ -75,7 +75,7 @@ public class Linker {
      * @throws IOException
      * @throws ClassNotFoundException
      */
-    public Message receiveMessage(int fromId) throws IOException, ClassNotFoundException, SocketException {
+    public Message receiveMessage(int fromId) throws IOException, ClassNotFoundException {
         int fromIndex = idToIndex(fromId);
         Message msg = (Message)in[fromIndex].readObject();   // This will block if no message.
         return msg;

@@ -54,6 +54,8 @@ public class Server {
 //            System.out.println("close");
 //            linker.close();
             
+            SpanTree proc = null;
+            proc = new SpanTree(linker, (myId == 0));
             
             /* Use thread pools to manage process behaviors */
             ExecutorService executorService = Executors.newFixedThreadPool(50);
@@ -62,6 +64,10 @@ public class Server {
                 Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
                 executorService.execute(task);
             }
+            
+
+            proc.waitForDone();
+            System.out.println(String.format("[Node %d] Continue", myId));
                
             linker.multicast(linker.getNeighbors(), Tag.APP, "Test");
             

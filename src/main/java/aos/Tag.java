@@ -16,5 +16,8 @@ public enum Tag {
     // A Tree message must be either Invite, Accept, or Reject 
     TREE_INVITE,
     TREE_ACCEPT,
-    TREE_REJECT;
+    TREE_REJECT,
+    
+    TREE_CONVERGE,
+    TREE_BROADCAST;
 }
