@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+
+import snapshot.*;
 /**
  * 
  * @author Zeqing Li, zxl165030, The University of Texas at Dallas
@@ -63,6 +65,19 @@ public class Server {
                
             linker.multicast(linker.getNeighbors(), Tag.APP, "Test");
             
+            
+ //-------------------------------------- for CL Protocol--------------------------------------------------
+            
+            CamCircToken sp = new CamCircToken(linker,0);
+            Camera camera = new RecvCamera(linker, sp);
+            sp.initiate();
+            int numProcess = proto.numProc;
+             
+            for (int i = 0; i < numProcess; i++)
+                if (i != myId) 
+                	(new Thread(new ListenerThread(myId,i,camera))).start();
+            if (myId == 0) camera.globalState();
+//---------------------------------------CL Protocol End----------------------------------------------------
             Thread.sleep(5000);
             linker.close();
             executorService.shutdown();
@@ -72,5 +87,7 @@ public class Server {
         }
         
     }
+    
+
 
 }
