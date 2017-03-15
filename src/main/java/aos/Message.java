@@ -22,6 +22,7 @@ public class Message implements Serializable{
     
     /**
      * Constructor for application message
+     * 
      * @param srcId
      * @param dst
      * @param content
@@ -91,7 +92,7 @@ public class Message implements Serializable{
     @Override 
     public String toString(){
 //        if(tag.equals("vector"))
-        return String.format("[%s] SOURCE = %d DST = %d CONTENT = \"%s\" VECTOR = \"%s\"", 
+        return String.format("[%s] SOURCE = %d DST = %d CONTENT = \"%s\" VECTOR = %s", 
                 tag, this.srcId, this.dstId, this.content, Arrays.toString(v));
     }
 

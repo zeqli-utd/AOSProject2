@@ -22,19 +22,27 @@ public class SpanTree extends Process {
             if(initLinker.getNeighbors().size() == 0){
                 done = true;
             } else {
-                try {
-                    sendToNeighbors(Tag.TREE_INVITE, "Invite");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                initiate();
             }
+        }
+    }
+    
+    /**
+     * Once the class is instantiated and is root node.
+     * Broadcast invitation to neighbors 
+     */
+    public void initiate(){
+        try {
+            sendToNeighbors(Tag.TREE_INVITE, "Invite");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     
     // block till children known
     public synchronized void waitForDone () throws InterruptedException { 
         while (!done){
-            wait();
+            procWait();
         }
     }
     
@@ -42,28 +50,38 @@ public class SpanTree extends Process {
      * 
      */
     @Override
-    public synchronized void handleMessage(Message m, int srcId, Tag tag) throws IOException{
-        if (tag.equals(Tag.TREE_INVITE)){
+    public synchronized void handleMessage(Message m, int srcId, Tag tag) throws IOException {
+        if (tag.equals (Tag.TREE_INVITE)) {
+            
+            // If the parent reference not set yet.
             if (parent == -1) {
                 numReports++;
                 parent = srcId;
                 sendMessage(srcId, Tag.TREE_ACCEPT, "Accept");
-                
-                for (Node neighbor: linker.getNeighbors()){
+
+                for (Node neighbor : linker.getNeighbors()) {
                     int dstId = neighbor.getNodeId();
-                    if ( dstId != srcId){
+                    if (dstId != srcId) {
                         sendMessage(dstId, Tag.TREE_INVITE, "Invite");
                     }
                 }
-            } else if (tag.equals(Tag.TREE_ACCEPT) | tag.equals(Tag.TREE_REJECT)){
-                if (tag.equals(Tag.TREE_ACCEPT))
-                    children.add(srcId);
+            } else {
+                // If the parent reference already set. Reject the request
+                sendMessage(srcId, Tag.TREE_REJECT, "Reject");
                 numReports++;
-                if (numReports == linker.getNeighbors().size()) {
-                    done = true;
-                    notify();
-                }
             }
+                
+       // Handle Accept and Reject messages.
+       } else if (tag.equals (Tag.TREE_ACCEPT) | tag.equals (Tag.TREE_REJECT)) {
+            if (tag.equals(Tag.TREE_ACCEPT))
+                children.add(srcId);
+            
+            numReports++;
+            if (numReports == linker.getNeighbors().size()) {
+                done = true;
+                notify();
+            }
+            
         }
     }
     

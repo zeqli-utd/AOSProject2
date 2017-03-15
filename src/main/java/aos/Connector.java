@@ -55,13 +55,13 @@ public class Connector {
         int numRecved = 0;
         System.out.println(processes);
         while(numRecved < processes.size() && processes.get(numRecved).getNodeId() < myId){
-            System.out.println(String.format("[Node %d] numRecved %d, nodeId %d",  myId, numRecved, processes.get(numRecved).getNodeId()));
+            System.out.println(String.format("[Node %d] [Connect:Phase 1] Status: numRecved %d, nodeId %d",  myId, numRecved, processes.get(numRecved).getNodeId()));
             Socket socket = listener.accept();
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             
             // Read the first message from new request.
             Message msg = (Message)ois.readObject();
-            System.out.println(String.format("[Node %d] receive message, %s", myId, msg.toString()));
+            System.out.println(String.format("[Node %d] [Connect:Phase 1] Receive: %s", myId, msg.toString()));
             
             int fromId = msg.getSrcId();
             int fromIndex = Collections.binarySearch(processes, new Node(fromId));
@@ -77,7 +77,7 @@ public class Connector {
                 numRecved++;
             }
         }
-        System.out.println(String.format("[Node %d] accepted finished", myId));
+        System.out.println(String.format("[Node %d] [Connect:Phase 1] Complete.", myId));
         
         /* Contact all the bigger process*/
         while(numRecved < processes.size()){
@@ -91,16 +91,16 @@ public class Connector {
             boolean connected = false;
             while(!connected){
                 try{ 
-                    System.out.println(String.format("[Node %d] Connect to %s:%d", myId, host, port));
+                    System.out.println(String.format("[Node %d] [Connect:Phase 2] Connect to %s:%d", myId, host, port));
                     link[dstIndex] = new Socket(host, port);
                     connected = true;
                 } catch (ConnectException e){
-                    System.out.println(String.format("[Node %d] Connection fail: %s", myId, e.toString()));
+                    System.out.println(String.format("[Node %d] [Connect:Phase 2] Connection fail: %s", myId, e.toString()));
                     Thread.sleep(1000);
-                    System.out.println(String.format("[Node %d] Retry connecting...", myId));
+                    System.out.println(String.format("[Node %d] [Connect:Phase 2] Retry connecting...", myId));
                 }
             }
-            System.out.println(String.format("[Node %d] Connection success! to %s:%d", myId, host, port));
+            System.out.println(String.format("[Node %d] [Connect:Phase 2] Connection success! to %s:%d", myId, host, port));
             
             out[dstIndex] = new ObjectOutputStream(link[dstIndex].getOutputStream());
             
@@ -114,13 +114,13 @@ public class Connector {
             in[dstIndex] = new ObjectInputStream(link[dstIndex].getInputStream());
             msg = (Message)in[dstIndex].readObject();
             if(msg.getTag().equals(Tag.HANDSHAKE)){
-                System.out.println(String.format("[Node %d] InputStream Setup Success! ", myId));
+                System.out.println(String.format("[Node %d] [Connect:Phase 3] InputStream Setup Success! ", myId));
             }
-            System.out.println(String.format("[Node %d], send msg, %s", myId, msg.toString()));
+            System.out.println(String.format("[Node %d] [Connect:Phase 3] Send msg, %s", myId, msg.toString()));
             numRecved++;
         }
 
-        System.out.println(String.format("[Node %d] build channel finished", myId));
+        System.out.println(String.format("[Node %d] [Connect:Phase 3] build channel finished", myId));
         
     }
     

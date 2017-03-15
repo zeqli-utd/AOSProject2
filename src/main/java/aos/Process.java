@@ -1,6 +1,8 @@
 package aos;
 
 import java.io.IOException;
+import java.net.SocketException;
+import java.util.List;
 
 public class Process implements MessageHandler{
     protected int numProc, myId;
@@ -13,23 +15,15 @@ public class Process implements MessageHandler{
     }
     
     /**
-     * Handle message from a specific node.
+     * Default message handler.
+     * Accept and process application message only 
+     * 
+     * Only one thread can handle message at the same time.
+     * 
      * @throws IOException 
      */
-    public synchronized void handleMessage(Message m, int srcId, Tag tag) throws IOException{
-        // TODO:  
-        switch(tag){
-            case VECTOR:
-            case SETUP:
-            case MARKER:
-            case APP:
-            case HANDSHAKE:
-            case TREE_INVITE:
-            default:
-            break;
-        }
-//        VECTOR,
-
+    public synchronized void handleMessage(Message msg, int srcId, Tag tag) throws IOException{
+        System.out.println(String.format("[Node %d] [Request] content=%s", myId, msg.toString()));
     }
     
     /**
@@ -50,22 +44,23 @@ public class Process implements MessageHandler{
      * @throws IOException
      */
     public void sendToNeighbors(Tag tag, String content) throws IOException{
-        for(int i = 0; i < numProc; i++){
-            sendMessage(i, tag, content);
-        }
+        List<Node> neighbors = linker.getNeighbors();
+        linker.multicast(neighbors, tag, content);
     }
     
     /**
      * Retrieve message for a specific node
+     * @throws IOException 
      */
     public Message receiveMessage(int fromId) throws IOException{
         try{
             return linker.receiveMessage(fromId);
-        } catch (IOException | ClassNotFoundException e){
+        } catch (ClassNotFoundException e){
             e.printStackTrace();
-            System.err.println(e);
-            linker.close();
             return null;
+        } catch (IOException e){
+            linker.close();
+            throw e;
         } 
     }
     

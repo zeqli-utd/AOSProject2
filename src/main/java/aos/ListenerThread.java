@@ -1,6 +1,7 @@
 package aos;
 
-import java.io.IOException;
+import java.io.EOFException;
+import java.net.SocketException;
 
 /**
  * Thread listen to each neighbors
@@ -8,11 +9,13 @@ import java.io.IOException;
  *
  */
 public class ListenerThread implements Runnable {
-    int channel;
-    MessageHandler process;
+    private int myId;
+    private int channel;
+    private MessageHandler process;
     
     
-    public ListenerThread(int channel, MessageHandler process) {
+    public ListenerThread(int myId, int channel, MessageHandler process) {
+        this.myId = myId;
         this.channel = channel;
         this.process = process;
     }
@@ -20,17 +23,18 @@ public class ListenerThread implements Runnable {
 
     @Override
     public void run() {
-        while(true){
-            Message m;
-            try {
-                m = process.receiveMessage(channel);
-                process.handleMessage(m, m.getSrcId(), m.getTag());
-            } catch (IOException e) {
-                e.printStackTrace();
+        try {
+            while(true){
+                Message msg;
+                msg = process.receiveMessage(channel);
+                process.handleMessage(msg, msg.getSrcId(), msg.getTag());
             }
-            
-        }
-        
+        } catch (SocketException | EOFException e) {
+            // Handle Socket Closed Exception
+            System.out.println(String.format("[Node %d] Channel %d Terminated. %s", myId, channel, e.toString()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }        
     }
 
 }

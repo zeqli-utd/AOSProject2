@@ -1,6 +1,8 @@
 package aos;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 
@@ -51,15 +53,20 @@ public class Server {
 //            linker.close();
             
             
-            
-            
             /* Use thread pools to manage process behaviors */
-            /*ExecutorService executorService = Executors.newFixedThreadPool(50);
-            for(int i = 0; i < proto.getNumProc(); i++){
+            ExecutorService executorService = Executors.newFixedThreadPool(50);
+            for(Node node : linker.getNeighbors()){
                 Process proc = new Process(linker);
-                Runnable task = new ListenerThread(i, proc);
-                executorService.submit(task);
-            }*/
+                Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
+                executorService.execute(task);
+            }
+               
+            linker.multicast(linker.getNeighbors(), Tag.APP, "Test");
+            
+            Thread.sleep(5000);
+            linker.close();
+            executorService.shutdown();
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
