@@ -57,8 +57,8 @@ public class Server {
             
             /* Use thread pools to manage process behaviors */
             ExecutorService executorService = Executors.newFixedThreadPool(50);
+            Process proc = new Process(linker);
             for(Node node : linker.getNeighbors()){
-                Process proc = new Process(linker);
                 Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
                 executorService.execute(task);
             }
