@@ -1,8 +1,13 @@
-package aos;
+package unit;
 
 import java.io.File;
 
 import org.junit.Test;
+
+import aos.ConfigurationLoader;
+import aos.MAP;
+import aos.MAPConfigurationLoader;
+import aos.Protocol;
 
 public class MAPConfigurationLoaderTest {
     ConfigurationLoader configLoader = new MAPConfigurationLoader();

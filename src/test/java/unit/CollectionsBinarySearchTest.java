@@ -1,4 +1,4 @@
-package aos;
+package unit;
 
 import static org.junit.Assert.*;
 
@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.List;
 
 import org.junit.Test;
+
+import aos.Node;
 
 
 public class CollectionsBinarySearchTest {
