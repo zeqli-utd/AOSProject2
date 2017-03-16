@@ -1,10 +1,9 @@
 package snapshot;
 
 import java.io.IOException;
-
-import aos.Linker;
 import aos.Message;
 import aos.Tag;
+import helpers.Linker;
 
 public class CamCircToken extends CircToken implements CamUser {
     public CamCircToken(Linker initComm, int coordinator) {

@@ -4,10 +4,10 @@ import java.io.File;
 
 import org.junit.Test;
 
-import aos.ConfigurationLoader;
 import aos.MAP;
-import aos.MAPConfigurationLoader;
 import aos.Protocol;
+import helpers.ConfigurationLoader;
+import helpers.MAPConfigurationLoader;
 
 public class MAPConfigurationLoaderTest {
     ConfigurationLoader configLoader = new MAPConfigurationLoader();

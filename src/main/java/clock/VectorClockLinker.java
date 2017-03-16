@@ -4,10 +4,10 @@ package clock;
 import java.io.IOException;
 import java.util.List;
 
-import aos.Linker;
 import aos.Message;
 import aos.Node;
 import aos.Tag;
+import helpers.Linker;
 
 public class VectorClockLinker extends Linker {
     private VectorClock vc;

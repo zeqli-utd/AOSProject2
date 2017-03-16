@@ -1,4 +1,4 @@
-package aos;
+package helpers;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -7,6 +7,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.List;
+
+import aos.Message;
+import aos.Node;
+import aos.Tag;
 
 
 /**
@@ -68,7 +72,7 @@ public class Connector {
             
             // Read the first message from new request.
             Message msg = (Message)ois.readObject();
-            System.out.println(String.format("[Node %d] [Connect:Phase 1] Receive: %s", myId, msg.toString()));
+            System.out.println(String.format("[Node %d] [Connect:Phase 1] Receive %s", myId, msg.toString()));
             
             int fromId = msg.getSrcId();
             int fromIndex = Collections.binarySearch(processes, new Node(fromId));
@@ -123,11 +127,11 @@ public class Connector {
             if(msg.getTag().equals(Tag.HANDSHAKE)){
                 System.out.println(String.format("[Node %d] [Connect:Phase 3] InputStream Setup Success! ", myId));
             }
-            System.out.println(String.format("[Node %d] [Connect:Phase 3] Send msg, %s", myId, msg.toString()));
+            System.out.println(String.format("[Node %d] [Connect:Phase 3] Send %s", myId, msg.toString()));
             numRecved++;
         }
 
-        System.out.println(String.format("[Node %d] [Connect:Phase 3] build channel finished", myId));
+        System.out.println(String.format("[Node %d] [Connect:Phase 3] Build Channel Done.", myId));
         
     }
     

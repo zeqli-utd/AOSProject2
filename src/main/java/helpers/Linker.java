@@ -1,4 +1,4 @@
-package aos;
+package helpers;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -6,6 +6,10 @@ import java.io.ObjectOutputStream;
 import java.net.SocketException;
 import java.util.Collections;
 import java.util.List;
+
+import aos.Message;
+import aos.Node;
+import aos.Tag;
 
 /**
  * A coordinator for manage  

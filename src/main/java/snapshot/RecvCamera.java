@@ -4,10 +4,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import aos.Linker;
 import aos.Message;
 import aos.Process;
 import aos.Tag;
+import helpers.Linker;
 
 //Pj is a neighbor of Pi if there is a channel from Pi to Pj
 

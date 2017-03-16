@@ -1,9 +1,9 @@
 package snapshot;
 import java.util.Timer;
 
-import aos.Linker;
 import aos.Message;
 import aos.Process;
+import helpers.Linker;
 
 public class CircToken extends Process implements Lock {
     boolean haveToken;

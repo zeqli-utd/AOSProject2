@@ -3,6 +3,8 @@ package aos;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import helpers.Linker;
+
 
 /**
  * Spanning Tree Builder
@@ -26,8 +28,9 @@ public class SpanTree extends Process {
     private String snapshot = "";
 
     
-    public SpanTree(Linker initLinker, boolean isRoot){
+    public SpanTree(Linker initLinker){
         super(initLinker);
+        boolean isRoot = (myId == 0);
         if (isRoot){
             parent = initLinker.getMyId();
             if(initLinker.getNeighbors().size() == 0){

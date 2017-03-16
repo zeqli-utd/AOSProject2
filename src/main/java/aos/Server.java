@@ -1,11 +1,20 @@
 package aos;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-
-import snapshot.*;
+import helpers.ConfigurationLoader;
+import helpers.Linker;
+import helpers.MAPConfigurationLoader;
+import helpers.ProcessFactory;
+import helpers.RKey;
+import helpers.Registry;
+import helpers.Repository;
+import snapshot.CamCircToken;
+import snapshot.Camera;
+import snapshot.RecvCamera;
 /**
  * 
  * @author Zeqing Li, zxl165030, The University of Texas at Dallas
@@ -28,38 +37,30 @@ public class Server {
         String relativePath = args[2];
         
         /* Load configuration file */
-        Protocol proto = new MAP(myId, "MAP protocol");
-        ConfigurationLoader configLoader = new MAPConfigurationLoader();
-        configLoader.loadConfig(relativePath, myId, proto);
+        Repository registry = new Registry();   // Manage system variables              
+        ConfigurationLoader configLoader = 
+                new MAPConfigurationLoader(registry);
+        
+        // load List<Node> neighbors
+        // load GlobalParams;
+        configLoader.loadConfig(relativePath, myId);
+        
         try {
-            Linker linker = new Linker(myId, proto.getNeighbors());
             
-            // Make sure 
-            // 1. system properties are set properly
-            // 2. neighbor list is sorted
-            System.out.println(proto.toString());
+            @SuppressWarnings("unchecked")
+            List<Node> neighbors = (List<Node>) registry.getObject(RKey.KEY_NEIGHBORS.toString());
+            Linker linker = new Linker(myId, neighbors);
             linker.buildChannels(port);
+            registry.addLinker(linker);
 
-            // Bug. Dont uncomment this.
-//            int numSent = 0, numRecved = 0, numProc = linker.getNeighbors().size();
-//            linker.multicast(linker.getNeighbors(), Tag.APP, "Test");
-//            
-//            for (Node node : linker.getNeighbors()){
-//                int nodeId = node.getNodeId();
-//                linker.receiveMessage(nodeId);
-//            }
-//            
-//            Thread.sleep(20000);
-//            
-//            System.out.println("close");
-//            linker.close();
+
+            ProcessFactory factory = registry.getProcessFactory();
+            //SpanTree proc = (SpanTree) factory.createSpanTree();
+            MAP proc = (MAP) factory.createMAP();
             
-            SpanTree proc = null;
-            proc = new SpanTree(linker, (myId == 0));
-            
+
             /* Use thread pools to manage process behaviors */
             ExecutorService executorService = Executors.newFixedThreadPool(50);
-            Process proc = new Process(linker);
             for(Node node : linker.getNeighbors()){
                 Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
                 executorService.execute(task);
@@ -69,7 +70,9 @@ public class Server {
             proc.waitForDone();
             System.out.println(String.format("[Node %d] Continue", myId));
                
-            linker.multicast(linker.getNeighbors(), Tag.APP, "Test");
+            Runnable mapTask = new MAPThread(myId, proc);
+            executorService.execute(mapTask);
+            
             
             
  //-------------------------------------- for CL Protocol--------------------------------------------------
@@ -90,7 +93,6 @@ public class Server {
             	(new Thread(clp)).start();
             	Thread.sleep(100);
             }
-          
 //---------------------------------------CL Protocol End----------------------------------------------------
             Thread.sleep(5000);
             linker.close();

@@ -3,6 +3,8 @@ package aos;
 import java.io.IOException;
 import java.util.List;
 
+import helpers.Linker;
+
 public class Process implements MessageHandler{
     protected int numProc, myId;
     protected Linker linker;
@@ -22,7 +24,8 @@ public class Process implements MessageHandler{
      * @throws IOException 
      */
     public synchronized void handleMessage(Message msg, int srcId, Tag tag) throws IOException{
-        System.out.println(String.format("[Node %d] [Request] content=%s", myId, msg.toString()));
+        if(tag == Tag.APP) System.out.println("This is application message");
+        else System.out.println(String.format("[Node %d] [Request] content=%s", myId, msg.toString()));
     }
     
     /**
@@ -69,5 +72,24 @@ public class Process implements MessageHandler{
         } catch (InterruptedException e){
             System.err.println(e);
         }
+    }
+    
+    /**
+     * String representation of process
+     */
+    public synchronized String toString(){
+        StringBuilder sb = new StringBuilder();
+        String newline = "\n";
+        String meta = String.format("[Node Id = %d]", myId);
+        sb.append(meta).append(newline);
+        if(numProc != 0){
+            String neighborInfo = String.format("Neighbor Info: \nnumProc: %d", numProc);
+            sb.append(neighborInfo).append(newline);
+            List<Node> neighbors = linker.getNeighbors();
+            for(Node node : neighbors){
+                sb.append(node.toString()).append(newline);
+            }
+        }
+        return sb.toString();
     }
 }
