@@ -2,11 +2,11 @@
 
 
 # Change this to your netid
-netid=jxl167130
+netid=zxl165030
 
 #
 # Root directory of your project
-PROJDIR=/home/012/j/jx/jxl167130/Project
+PROJDIR=/people/cs/s/zxl165030/TestProj
 
 #
 # Directory where the config file is located on your local system
@@ -25,7 +25,7 @@ cat $CONFIGLOCAL | sed -e "s/#.*//" | sed -e "/^\s*$/d" |
         host=$( echo $line | awk '{ print $2 }' )
 
         echo $host
-        gnome-terminal -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $netid@$host killall -u $netid" &
+        bash -c "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $netid@$host killall -u $netid" &
         sleep 1
 
         n=$(( n + 1 ))

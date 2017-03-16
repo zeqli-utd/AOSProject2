@@ -10,7 +10,7 @@ public class CamCircToken extends CircToken implements CamUser {
         super(initComm, coordinator);
     }
     public synchronized void localState() {
-        System.out.println("local state: " + vectorclock); //!!this clock should get from linker or other place
+        System.out.println("local state: "); //!!this clock should get from linker or other place
                                                            // make sure how the vectorClock is used and in which Classes
     }
 

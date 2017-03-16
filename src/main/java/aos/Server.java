@@ -62,17 +62,17 @@ public class Server {
 
             /* Use thread pools to manage process behaviors */
             ExecutorService executorService = Executors.newFixedThreadPool(50);
-            for(Node node : linker.getNeighbors()){
-                Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
-                executorService.execute(task);
-            }
-            
-
-            proc.waitForDone();
-            System.out.println(String.format("[Node %d] Continue", myId));
-               
-            Runnable mapTask = new MAPThread(myId, proc);
-            executorService.execute(mapTask);
+//            for(Node node : linker.getNeighbors()){
+//                Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
+//                executorService.execute(task);
+//            }
+//            
+//
+//            proc.waitForDone();
+//            System.out.println(String.format("[Node %d] Continue", myId));
+//               
+//            Runnable mapTask = new MAPThread(myId, proc);
+//            executorService.execute(mapTask);
             
             
             
@@ -96,7 +96,7 @@ public class Server {
             	break;
             }
 //---------------------------------------CL Protocol End----------------------------------------------------
-            Thread.sleep(5000);
+            Thread.sleep(10000);
             linker.close();
             executorService.shutdown();
             

@@ -1,19 +1,17 @@
-etid=jxl167130
+# Change this to your netid
+netid=zxl165030
 
 # Root directory of your project
-PROJDIR=/home/012/j/jx/jxl167130/Project
+PROJDIR=/home/011/z/zx/zxl165030/TestProj
 
 # Directory where the config file is located on your local system
 CONFIGLOCAL=$HOME/launch/config.txt
 
 # Directory your java classes are in
-BINDIR=/home/012/j/jx/jxl167130/Project/bin
+BINDIR=$PROJDIR/bin
 
 # Your main project class
-PROG=Proj2
-
-#Path of Config file
-CONFIG=/home/012/j/jxl167130/config.txt
+PROG=aos.Server
 
 n=0
 
@@ -27,9 +25,9 @@ cat $CONFIGLOCAL | sed -e "s/#.*//" | sed -e "/^\s*$/d" |
         read line
         n=$( echo $line | awk '{ print $1 }' )
         host=$( echo $line | awk '{ print $2 }' )
-        port=$( echo $lin4 | awk '{ print $3 }' )
+        port=$( echo $line | awk '{ print $3 }' )
 
-        gnome-terminal -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $netid@$host java -cp $BINDIR $PROG $n $port $CONFIG; $SHELL" &
+        bash -c "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $netid@$host java -cp $BINDIR $PROG $port $n $CONFIGLOCAL; $SHELL" &
 
         n=$(( n + 1 ))
     done
