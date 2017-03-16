@@ -46,14 +46,21 @@ public class Connector {
      * @param processes Sorted list of nodes containing nodeId, host address, and port.
      * @throws Exception
      */
-    public void connect(int listenPort, int myId, ObjectInputStream[] in, ObjectOutputStream[] out, List<Node> processes) throws Exception{
+    public void connect(
+            int listenPort, 
+            int myId, 
+            ObjectInputStream[] in, 
+            ObjectOutputStream[] out, 
+            List<Node> processes) throws Exception{
+        
         int numProc = processes.size();
         link = new Socket[numProc];
         listener = new ServerSocket(listenPort);
         
         /* Accept connections from all the smaller processes */
         int numRecved = 0;
-        System.out.println(processes);
+        System.out.println(String.format("[Node %d] [Connect: Phase 0] Targets: ", myId, processes.toString()));
+        
         while(numRecved < processes.size() && processes.get(numRecved).getNodeId() < myId){
             System.out.println(String.format("[Node %d] [Connect:Phase 1] Status: numRecved %d, nodeId %d",  myId, numRecved, processes.get(numRecved).getNodeId()));
             Socket socket = listener.accept();

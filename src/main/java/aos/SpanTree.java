@@ -10,13 +10,17 @@ import java.util.ArrayList;
  *
  */
 public class SpanTree extends Process {
+    
     private int parent = -1;    // No parent yet
     private ArrayList<Integer> children = new ArrayList<>();
+    
     private int numReports = 0;        // Message received from neighbors
     private boolean done = false;
-    private ArrayList<Integer> pending = new ArrayList<>();
     
-    // Testing only
+    
+    
+    // Broadcast Convergecast Controls
+    private ArrayList<Integer> pending = new ArrayList<>();
     private boolean pendingSet = false;
     private boolean isAwake = false;
     private String snapshot = "";
@@ -81,13 +85,14 @@ public class SpanTree extends Process {
         }        
     }
     
-    // block till children known
+    // Block till tree was constructed
     public synchronized void waitForDone () throws InterruptedException { 
         while (!done){
             procWait();
         }
     }
     
+    // Send to all children
     public synchronized void sendChildren(Tag tag, String content) throws IOException{
         for (int dstId : children) {
             sendMessage(dstId, tag, content);
