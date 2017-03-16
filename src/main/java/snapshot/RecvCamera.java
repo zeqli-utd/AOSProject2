@@ -2,9 +2,11 @@ package snapshot;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import aos.Message;
+import aos.Node;
 import aos.Process;
 import aos.Tag;
 import helpers.Linker;
@@ -49,10 +51,11 @@ public class RecvCamera extends Process implements Camera {
     @Override
     // the method handleMessage gives the rule for receiving a marker message
     public void handleMessage(Message m, int srcId, Tag tag) throws IOException {  
+        int srcIdx = idToIndex(srcId);
         if(tag.equals(Tag.MARKER)){      
         	 if(myColor == WHITE)    // if the process is white, it turns red by invoking globalState()
                  globalState();
-             closed[srcId] = true;    //set closed[srcId] to true because there cannot be any message of type wr in that channel after the marker is received
+             closed[srcIdx] = true;    //set closed[srcId] to true because there cannot be any message of type wr in that channel after the marker is received
              if(isDone()){   //determines whether the process has recorded its local state and all incoming channels 
                  System.out.println("Channel State : Transit Messages");
                  for(int i = 0; i < numProc; i++){
@@ -63,9 +66,9 @@ public class RecvCamera extends Process implements Camera {
              } 
         }
         else { // handle application message, true if the application message is of type wr
-            if(myColor == RED && !closed[srcId])  
-                channels.get(srcId).add(m);     // if the application message is of type wr, add the message to channels
-            app.handleMessage(m, srcId, tag);   //give it to app(CamCircToken)
+            if(myColor == RED && !closed[srcIdx])  
+                channels.get(srcIdx).add(m);     // if the application message is of type wr, add the message to channels
+            app.handleMessage(m, srcIdx, tag);   //give it to app(CamCircToken)
         }
 
     }
@@ -79,6 +82,10 @@ public class RecvCamera extends Process implements Camera {
                 return false;
         }
         return true;
+    }
+    
+    private int idToIndex(int nodeId){
+        return Collections.binarySearch(linker.getNeighbors(), new Node(nodeId));
     }
 
 }
