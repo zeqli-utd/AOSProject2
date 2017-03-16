@@ -14,13 +14,13 @@ public class SpanTree extends Process {
     private ArrayList<Integer> children = new ArrayList<>();
     private int numReports = 0;        // Message received from neighbors
     private boolean done = false;
-    private int numChildren = -1;
     private ArrayList<Integer> pending = new ArrayList<>();
     
     // Testing only
     private boolean pendingSet = false;
-    private boolean answerRecved;
-    private int answer;
+    private boolean isAwake = false;
+    private String snapshot = "";
+
     
     public SpanTree(Linker initLinker, boolean isRoot){
         super(initLinker);
@@ -46,29 +46,39 @@ public class SpanTree extends Process {
         }
     }
     
-    public int computeGlobal() throws IOException{
-        pending = new ArrayList<>();
-        pending.addAll(children);
-        pendingSet = true;
+    // Pseudo Compute Snapshot
+    public synchronized void computeGlobal() throws IOException{
         
-        notifyAll();
-        
-        while (!pending.isEmpty()){
-            procWait();
-        }
-        
-        if( parent == myId){  // Root node
-            answer = myId;
-        } else {  // Non-root node
-            sendMessage(parent, Tag.TREE_CONVERGE, Integer.toString(myId));
-            answerRecved = false;
-            while (!answerRecved){
-                procWait();
+        // Parent node trigger the computeGlobal event
+        if (parent == myId){ // Root node
+            sendChildren(Tag.TREE_BROADCAST, "Broadcast");
+            
+            // TODO: isAwake will apply to parent as well
+        } else {
+            while (!isAwake){
+                procWait(); 
             }
         }
         
-        return 0;
+        // Setup snapshot status
+        pending = new ArrayList<>();
+        pending.addAll(children);
+        snapshot += myId;
+        pendingSet = true;
         
+        notifyAll(); // Notify handleConvergeCast
+    
+        
+        while (!pending.isEmpty()){
+            procWait();        // Wait for children 
+        }
+        
+        // When handleConvergeCast finish up all children message handling.
+        if( parent == myId){  // Root node
+            System.out.println(String.format("[Node %d] [Result: %s]", myId, snapshot));
+        } else {  // Non-root node
+            sendMessage(parent, Tag.TREE_CONVERGE, snapshot);
+        }        
     }
     
     // block till children known
@@ -78,7 +88,7 @@ public class SpanTree extends Process {
         }
     }
     
-    public void sendChildren(Tag tag, String content) throws IOException{
+    public synchronized void sendChildren(Tag tag, String content) throws IOException{
         for (int dstId : children) {
             sendMessage(dstId, tag, content);
         }
@@ -108,22 +118,27 @@ public class SpanTree extends Process {
 
     
     public synchronized void handleConvergeCast(Message msg, int srcId, Tag tag) throws IOException{
-        numReports++;
-        if (numReports == numChildren){
-            if (parent == myId){
-                // Compute global function
-            } else {
-                sendMessage(parent, Tag.TREE_CONVERGE, "Converge");
-            }
+        while (!pendingSet) {
+            procWait();
         }
+
+        snapshot += msg.getContent();
+        pending.remove(new Integer(srcId));
+        if (pending.isEmpty()){
+            notifyAll();  // Notify computeGlobal() cast message up
+        }         
+        
     }
     
+    // Only received broadcast from parent
     public synchronized void handleBroadCast(Message msg, int srcId, Tag tag) throws IOException{
+        // Receive signal from parent, resume computeGlobal()
+        isAwake = true;
+        notifyAll();
+        
         // Non-root node
         if (parent != myId) {
-            for (int dstId : children) {
-                sendMessage(dstId, Tag.TREE_BROADCAST, "Invite");
-            }
+            sendChildren(Tag.TREE_BROADCAST, "Broadcast");
         }
     }
     
@@ -155,9 +170,8 @@ public class SpanTree extends Process {
             children.add(srcId);
         if (numReports == numProc) {
             done = true;
-            numChildren = children.size();
             System.out.println(String.format("[Node %d] [SpanTree Constructed %d/%d] Parent=%d Children=%s", myId, numReports, numProc, parent, children.toString()));
-            notify();
+            notify();    // Notify wait for done.
         }
 
         //System.out.println(String.format("[Node %d] [Invite.Response %d/%d] %s", myId, numReports, numProc, msg.toString()));
