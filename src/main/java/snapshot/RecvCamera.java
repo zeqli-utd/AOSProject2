@@ -16,8 +16,8 @@ public class RecvCamera extends Process implements Camera {
     private static final int RED = 1;
     private int myColor = WHITE;
     private boolean closed[];   // closed[k] stop to recording messages along kth incomming channel
-    private List<List<Message>> channels = null; //record the state of the kth coming channel
-    private CamUser app;
+    private List<List<Message>> channels = null; //channels[k] records the state of the kth incoming channel
+    private CamUser app;   //  sp = new CamCircToken(linker,0); recvcamera = new RecvCamera(linker, sp);
     
     //RecvCamera initialize the variables of the algorithm
     //All channels are initialized to empty
@@ -50,22 +50,22 @@ public class RecvCamera extends Process implements Camera {
     // the method handleMessage gives the rule for receiving a marker message
     public void handleMessage(Message m, int srcId, Tag tag) throws IOException {  
         if(tag.equals(Tag.MARKER)){      
-        	 if(myColor == WHITE)    // if the process is white, it turns red by involking globalState()
+        	 if(myColor == WHITE)    // if the process is white, it turns red by invoking globalState()
                  globalState();
              closed[srcId] = true;    //set closed[srcId] to true because there cannot be any message of type wr in that channel after the marker is received
-             if(isDone()){  
+             if(isDone()){   //determines whether the process has recorded its local state and all incoming channels 
                  System.out.println("Channel State : Transit Messages");
                  for(int i = 0; i < numProc; i++){
-                     while(!channels.get(i).isEmpty()){
+                     while(!channels.get(i).isEmpty()){   //
                          System.out.println(channels.get(i).remove(0).toString());
                      }
                  }
              } 
         }
         else { // handle application message, true if the application message is of type wr
-            if(myColor == RED && !closed[srcId])
-                channels.get(srcId).add(m);
-            app.handleMessage(m, srcId, tag);
+            if(myColor == RED && !closed[srcId])  
+                channels.get(srcId).add(m);     // if the application message is of type wr, add the message to channels
+            app.handleMessage(m, srcId, tag);   //give it to app(CamCircToken)
         }
 
     }
@@ -75,7 +75,7 @@ public class RecvCamera extends Process implements Camera {
         if(myColor == WHITE)
             return false;
         for(int i = 0; i < numProc; i++){
-            if(!closed[i])
+            if(!closed[i]) //if there is one channel not closed(closed[i] == true), it means not finished, should return false
                 return false;
         }
         return true;
