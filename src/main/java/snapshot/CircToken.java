@@ -34,7 +34,7 @@ public class CircToken extends Process implements Lock {
             sendMsg(next, "token");
             haveToken = false;
         }*/
-    	System.out.println("Empty Method sendToken()");
+    	System.out.println("Empty Method CircToken sendToken()");
     }
     public synchronized void handleMsg(Message m, int src, String tag) {
         if (tag.equals("token")) {

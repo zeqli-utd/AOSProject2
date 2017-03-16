@@ -9,4 +9,8 @@ public class CamCircToken extends CircToken implements CamUser {
     public synchronized void localState() {
         System.out.println("local state: haveToken=" + haveToken);
     }
+    
+    public synchronized void initiate(){
+    	//could be empty in my opinion right now
+    }
 }

@@ -104,4 +104,8 @@ public class Linker {
     public void close(){
         connector.closeSockets();
     }
+    
+    public int getNumProc(){
+    	return this.numProc;
+    }
 }

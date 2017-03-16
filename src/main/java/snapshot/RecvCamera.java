@@ -23,6 +23,7 @@ public class RecvCamera extends Process implements Camera {
     //All channels are initialized to empty
     public RecvCamera(Linker initLinker, CamUser app) {
         super(initLinker);
+       // int numProc = initLinker.getNumProc(); //no variable numProc before, have to get by linker //protected!
         closed = new boolean[numProc];  
         channels = new ArrayList<>(numProc);  
         for(int i = 0; i < numProc; i++){          // for each neighboring process Pk, closed[k] is initialized to false.

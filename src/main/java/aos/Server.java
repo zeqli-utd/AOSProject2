@@ -73,16 +73,24 @@ public class Server {
             
             
  //-------------------------------------- for CL Protocol--------------------------------------------------
-            
-            CamCircToken sp = new CamCircToken(linker,0);
-            Camera camera = new RecvCamera(linker, sp);
-            sp.initiate();
-            int numProcess = proto.numProc;
-             
-            for (int i = 0; i < numProcess; i++)
-                if (i != myId) 
-                	(new Thread(new ListenerThread(myId,i,camera))).start();
-            if (myId == 0) camera.globalState();
+            while(nothalt){ // need to discuss the boolean variable nothalt in which class
+            	            // nothalt is used for detect whether the Map halt or not
+            	
+            	// the following codes need to be put in a thread in a future, which should restart in some time
+            	/*  CamCircToken sp = new CamCircToken(linker,0);
+                  Camera camera = new RecvCamera(linker, sp);
+                  sp.initiate();
+                  int numProcess = proto.numProc;
+                   
+                  for (int i = 0; i < numProcess; i++)
+                      if (i != myId) 
+                      	(new Thread(new ListenerThread(myId,i,camera))).start();
+                  if (myId == 0) camera.globalState();       */    	
+            	CLProtocol clp = new CLProtocol(linker,myId,proto.numProc);
+            	(new Thread(clp)).start();
+            	Thread.sleep(100);
+            }
+          
 //---------------------------------------CL Protocol End----------------------------------------------------
             Thread.sleep(5000);
             linker.close();
