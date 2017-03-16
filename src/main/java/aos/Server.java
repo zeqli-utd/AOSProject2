@@ -12,6 +12,7 @@ import helpers.ProcessFactory;
 import helpers.RKey;
 import helpers.Registry;
 import helpers.Repository;
+import snapshot.CLProtocol;
 import snapshot.CamCircToken;
 import snapshot.Camera;
 import snapshot.RecvCamera;
@@ -76,7 +77,7 @@ public class Server {
             
             
  //-------------------------------------- for CL Protocol--------------------------------------------------
-            while(nothalt){ // need to discuss the boolean variable nothalt in which class
+            while(true){ // need to discuss the boolean variable nothalt in which class
             	            // nothalt is used for detect whether the Map halt or not
             	
             	// the following codes need to be put in a thread in a future, which should restart in some time
@@ -89,9 +90,10 @@ public class Server {
                       if (i != myId) 
                       	(new Thread(new ListenerThread(myId,i,camera))).start();
                   if (myId == 0) camera.globalState();       */    	
-            	CLProtocol clp = new CLProtocol(linker,myId,proto.numProc);
+            	CLProtocol clp = new CLProtocol(linker,myId,proc.numProc);
             	(new Thread(clp)).start();
             	Thread.sleep(100);
+            	break;
             }
 //---------------------------------------CL Protocol End----------------------------------------------------
             Thread.sleep(5000);
