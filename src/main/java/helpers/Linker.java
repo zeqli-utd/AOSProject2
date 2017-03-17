@@ -3,13 +3,13 @@ package helpers;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.SocketException;
 import java.util.Collections;
 import java.util.List;
 
 import aos.Message;
 import aos.Node;
 import aos.Tag;
+import clock.VectorClock;
 
 /**
  * A coordinator for manage  
@@ -53,8 +53,14 @@ public class Linker {
      * @throws IOException 
      */
     public synchronized void sendMessage(int dstId, Tag tag, String content) throws IOException{
+        sendMessage(dstId, tag, content, new int[0]);
+    }
+    
+    public synchronized void sendMessage(int dstId, Tag tag, String content, int[] vector) throws IOException{
         int dstIndex = idToIndex(dstId);
-        out[dstIndex].writeObject(new Message(myId, dstId, tag, content));
+        Message appMessage = new Message(myId, dstId, tag, content);
+        appMessage.setVector(vector);
+        out[dstIndex].writeObject(appMessage);
     }
     
     /**

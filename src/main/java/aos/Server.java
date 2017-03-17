@@ -12,10 +12,8 @@ import helpers.ProcessFactory;
 import helpers.RKey;
 import helpers.Registry;
 import helpers.Repository;
-import snapshot.CLProtocol;
-import snapshot.CamCircToken;
-import snapshot.Camera;
 import snapshot.RecvCamera;
+import snapshot.SnapshotThread;
 /**
  * 
  * @author Zeqing Li, zxl165030, The University of Texas at Dallas
@@ -48,54 +46,33 @@ public class Server {
         
         try {
             
+            // Setup registry.
             @SuppressWarnings("unchecked")
-            List<Node> neighbors = (List<Node>) registry.getObject(RKey.KEY_NEIGHBORS.toString());
+            List<Node> neighbors = (List<Node>) registry.getObject(RKey.KEY_NEIGHBORS.name());
             Linker linker = new Linker(myId, neighbors);
             linker.buildChannels(port);
             registry.addLinker(linker);
-
-
             ProcessFactory factory = registry.getProcessFactory();
-            //SpanTree proc = (SpanTree) factory.createSpanTree();
-            MAP proc = (MAP) factory.createMAP();
             
-
+            
+            
+            RecvCamera proc = factory.createCamera();
+            
             /* Use thread pools to manage process behaviors */
             ExecutorService executorService = Executors.newFixedThreadPool(50);
-//            for(Node node : linker.getNeighbors()){
-//                Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
-//                executorService.execute(task);
-//            }
-//            
-//
-//            proc.waitForDone();
-//            System.out.println(String.format("[Node %d] Continue", myId));
-//               
-//            Runnable mapTask = new MAPThread(myId, proc);
-//            executorService.execute(mapTask);
-            
-            
-            
- //-------------------------------------- for CL Protocol--------------------------------------------------
-            while(true){ // need to discuss the boolean variable nothalt in which class
-            	            // nothalt is used for detect whether the Map halt or not
-            	
-            	// the following codes need to be put in a thread in a future, which should restart in some time
-            	/*  CamCircToken sp = new CamCircToken(linker,0);
-                  Camera camera = new RecvCamera(linker, sp);
-                  sp.initiate();
-                  int numProcess = proto.numProc;
-                   
-                  for (int i = 0; i < numProcess; i++)
-                      if (i != myId) 
-                      	(new Thread(new ListenerThread(myId,i,camera))).start();
-                  if (myId == 0) camera.globalState();       */    	
-            	CLProtocol clp = new CLProtocol(linker,myId,proc.numProc);
-            	(new Thread(clp)).start();
-            	Thread.sleep(100);
-            	break;
+            for(Node node : linker.getNeighbors()){
+                Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
+                executorService.execute(task);
             }
-//---------------------------------------CL Protocol End----------------------------------------------------
+            
+            proc.waitForDone();  // Wait for tree constructed.
+            
+            SnapshotThread chandyLamportProtocol = new SnapshotThread(myId, proc);
+            executorService.execute(chandyLamportProtocol);
+            
+            MasterThread collector = new MasterThread(myId, proc);
+            executorService.execute(collector);
+            
             Thread.sleep(10000);
             linker.close();
             executorService.shutdown();

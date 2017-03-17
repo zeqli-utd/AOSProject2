@@ -2,7 +2,9 @@ package aos;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
+import clock.VectorClock;
 import helpers.Linker;
 
 
@@ -25,7 +27,7 @@ public class SpanTree extends Process {
     private ArrayList<Integer> pending = new ArrayList<>();
     private boolean pendingSet = false;
     private boolean isAwake = false;
-    private String snapshot = "";
+    private int[] snapshot;
 
     
     public SpanTree(Linker initLinker){
@@ -69,8 +71,11 @@ public class SpanTree extends Process {
         
         // Setup snapshot status
         pending = new ArrayList<>();
-        pending.addAll(children);
-        snapshot += myId;
+        pending.addAll(children);   
+        
+        // Retrieve a clone of vector
+        snapshot = vClock.getVector();
+        
         pendingSet = true;
         
         notifyAll(); // Notify handleConvergeCast
@@ -82,9 +87,9 @@ public class SpanTree extends Process {
         
         // When handleConvergeCast finish up all children message handling.
         if( parent == myId){  // Root node
-            System.out.println(String.format("[Node %d] [Result: %s]", myId, snapshot));
+            System.out.println(String.format("[Node %d] [Result: %s]", myId, Arrays.toString(snapshot)));
         } else {  // Non-root node
-            sendMessage(parent, Tag.TREE_CONVERGE, snapshot);
+            sendMessage(parent, Tag.TREE_CONVERGE, "", snapshot);
         }        
     }
     
@@ -129,8 +134,17 @@ public class SpanTree extends Process {
         while (!pendingSet) {
             procWait();
         }
-
-        snapshot += msg.getContent();
+        
+        if (!msg.containsVector()){
+            throw new IOException("Missing Vector");
+        }
+        boolean succeed = VectorClock.flatMerge(snapshot, msg.getVector());
+        if (!succeed){
+            throw new IOException("Vector mismatch " + 
+                    snapshot.toString() + " " + msg.getVector().toString());
+        }
+            
+        
         pending.remove(new Integer(srcId));
         if (pending.isEmpty()){
             notifyAll();  // Notify computeGlobal() cast message up
@@ -178,7 +192,10 @@ public class SpanTree extends Process {
             children.add(srcId);
         if (numReports == numProc) {
             done = true;
-            System.out.println(String.format("[Node %d] [SpanTree Constructed %d/%d] Parent=%d Children=%s", myId, numReports, numProc, parent, children.toString()));
+            System.out.println(String.format("[Node %d] "
+                    + "[SpanTree Constructed %d/%d] "
+                    + "Parent=%d Children=%s", 
+                    myId, numReports, numProc, parent, children.toString()));
             notify();    // Notify wait for done.
         }
 

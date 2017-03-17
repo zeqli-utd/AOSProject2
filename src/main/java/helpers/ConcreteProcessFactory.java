@@ -6,7 +6,9 @@ import aos.GlobalParams;
 import aos.MAP;
 import aos.Process;
 import aos.SpanTree;
+import clock.VectorClock;
 import snapshot.Camera;
+import snapshot.RecvCamera;
 
 /**
  * 
@@ -20,17 +22,32 @@ public class ConcreteProcessFactory implements ProcessFactory{
     public ConcreteProcessFactory(Repository repository){
         this.registry = repository; 
     }
+    
+    public VectorClock getDefaultVectorClock(){
+        int topologySize = getGlobalParameters().get(GlobalParams.NUM_NODES);
+        int myId = registry.getLinker().getMyId();
+        VectorClock v = new VectorClock(topologySize, myId); 
+        // TODO Test only, delete
+        for (int i = 0; i < myId; i++){
+            v.tick();
+        }
+        return v;
+    }
 
     @Override
     public Process createProcess() {
         Linker linker = registry.getLinker();
-        return new Process(linker);
+        Process proc = new Process(linker);
+        proc.setVectorClock(getDefaultVectorClock());
+        return proc;
     }
 
     @Override
     public SpanTree createSpanTree() {
         Linker linker = registry.getLinker();
-        return new SpanTree(linker);
+        SpanTree proc = new SpanTree(linker);
+        proc.setVectorClock(getDefaultVectorClock());
+        return proc;
     }
 
     @Override
@@ -39,21 +56,30 @@ public class ConcreteProcessFactory implements ProcessFactory{
             System.err.println("[Error] Global parameters unset!");
             return null;
         }
-        
+        Linker linker = registry.getLinker();
+        MAP proc = new MAP(linker, getGlobalParameters());
+        proc.setVectorClock(getDefaultVectorClock());
+        return proc;
+    }
+
+    @Override
+    public RecvCamera createCamera() {
+        if (!registry.containsKey(RKey.KEY_GLOB_PARAMS.name())){
+            System.err.println("[Error] Global parameters unset!");
+            return null;
+        }
+        Linker linker = registry.getLinker();
+        RecvCamera proc = new RecvCamera(linker, getGlobalParameters());
+        proc.setVectorClock(getDefaultVectorClock());
+        return proc;
+    }
+    
+    private Map<GlobalParams, Integer> getGlobalParameters(){
         @SuppressWarnings("unchecked")
         Map<GlobalParams, Integer> globalParams = 
                 (Map<GlobalParams, Integer>) registry.getObject(
                         RKey.KEY_GLOB_PARAMS.name());
-        Linker linker = registry.getLinker();
-        return new MAP(linker, globalParams);
-    }
-
-    @Override
-    public Camera createCamera() {
-        Linker linker = registry.getLinker();
-        int myId = linker.getMyId();
-        //return new RecvCamera(linker);
-        return null;
+        return globalParams;
     }
     
     

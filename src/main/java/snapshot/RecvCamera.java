@@ -4,73 +4,99 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+import aos.GlobalParams;
+import aos.MAP;
 import aos.Message;
 import aos.Node;
-import aos.Process;
 import aos.Tag;
+import clock.VectorClock;
 import helpers.Linker;
 
 //Pj is a neighbor of Pi if there is a channel from Pi to Pj
 
-public class RecvCamera extends Process implements Camera {
-    private static final int WHITE = 0;
-    private static final int RED = 1;
+public class RecvCamera extends MAP implements Camera, CamUser {
+    private static final int WHITE = 0;                // Initial State
+    private static final int RED = 1;                  // Snapshotted
     private int myColor = WHITE;
+    
+    
     private boolean closed[];   // closed[k] stop to recording messages along kth incomming channel
     private List<List<Message>> channels = null; //channels[k] records the state of the kth incoming channel
-    private CamUser app;   //  sp = new CamCircToken(linker,0); recvcamera = new RecvCamera(linker, sp);
     
     //RecvCamera initialize the variables of the algorithm
     //All channels are initialized to empty
-    public RecvCamera(Linker initLinker, CamUser app) {
-        super(initLinker);
-       // int numProc = initLinker.getNumProc(); //no variable numProc before, have to get by linker //protected!
-        closed = new boolean[numProc];  
-        channels = new ArrayList<>(numProc);  
-        for(int i = 0; i < numProc; i++){          // for each neighboring process Pk, closed[k] is initialized to false.
+    public RecvCamera(Linker initLinker, Map<GlobalParams, Integer> globalParams) {
+        super(initLinker, globalParams);
+        
+        this.closed = new boolean[numProc];  
+        this.channels = new ArrayList<>(numProc);          
+        
+        // for each neighboring process Pk, closed[k] is initialized to false.
+        for(int i = 0; i < numProc; i++){          
             channels.add(new ArrayList<>());
             closed[i] = false;
         } 
-        this.app = app;
     }
 
-    @Override
-    public synchronized void globalState() {
-        //The method globalState turns the process red, records the local state, and sends the Marker message on all outgoing channels
-        myColor = RED;
-        app.localState();     // Record local State;
-        try {
-            sendToNeighbors(Tag.MARKER, "");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }    
     
     
     @Override
     // the method handleMessage gives the rule for receiving a marker message
-    public void handleMessage(Message m, int srcId, Tag tag) throws IOException {  
+    public void handleMessage(Message msg, int srcId, Tag tag) throws IOException {  
         int srcIdx = idToIndex(srcId);
-        if(tag.equals(Tag.MARKER)){      
-        	 if(myColor == WHITE)    // if the process is white, it turns red by invoking globalState()
-                 globalState();
-             closed[srcIdx] = true;    //set closed[srcId] to true because there cannot be any message of type wr in that channel after the marker is received
-             if(isDone()){   //determines whether the process has recorded its local state and all incoming channels 
-                 System.out.println("Channel State : Transit Messages");
-                 for(int i = 0; i < numProc; i++){
-                     while(!channels.get(i).isEmpty()){   //
-                         System.out.println(channels.get(i).remove(0).toString());
-                     }
-                 }
-             } 
+        switch (tag){
+            case MARKER:
+                handleMarkerMessage(msg, srcId, tag);
+                break;
+            case APP:
+                // handle application message, true if the application message is of type 'White-Red'
+                if (myColor == RED && !closed[srcIdx]){
+                    // If the application message is of type 'White-Red'
+                    // then add the message to channels
+                    channels.get(srcIdx).add(msg);     
+                }
+                // intentionally no breaking, passdown Application message.
+            default:
+                super.handleMessage(msg, srcId, tag);
         }
-        else { // handle application message, true if the application message is of type wr
-            if(myColor == RED && !closed[srcIdx])  
-                channels.get(srcIdx).add(m);     // if the application message is of type wr, add the message to channels
-            app.handleMessage(m, srcIdx, tag);   //give it to app(CamCircToken)
-        }
-
+    }
+    
+    /**
+     * Handle marker messages
+     * @param msg 
+     * @param srcId
+     * @param tag
+     */
+    private void handleMarkerMessage(Message msg, int srcId, Tag tag){
+        int srcIdx = idToIndex(srcId);
+        
+        // If the process is white, 
+        // it turns red by invoking globalState()
+        if(myColor == WHITE)    
+            globalState();
+        
+        // Set closed[srcId] to true because 
+        // there cannot be any message of type 'White-Red'
+        // in that channel after the marker is received
+        closed[srcIdx] = true;    
+        
+        //determines whether the process has recorded its local state and all incoming channels 
+        if (isDone()){  
+            StringBuilder logger = new StringBuilder();
+            logger.append(String.format("[Node %d] Channel State : In-Transit Messages\n", myId));
+            for (int i = 0; i < numProc; i++){
+                logger.append(
+                        String.format("Channel %d: ", 
+                                linker.getNeighbors().get(i).getNodeId()));
+                while (!channels.get(i).isEmpty()){ 
+                    logger.append(channels.get(i).remove(0).toString());
+                }
+                logger.append("\n");
+            }
+            System.out.println(logger.toString());
+        } 
     }
     
     //the method isDone() determines whether the process has recorded its local state and all incoming channels 
@@ -78,14 +104,42 @@ public class RecvCamera extends Process implements Camera {
         if(myColor == WHITE)
             return false;
         for(int i = 0; i < numProc; i++){
-            if(!closed[i]) //if there is one channel not closed(closed[i] == true), it means not finished, should return false
+            // If there is one channel not closed(closed[i] == true),
+            // it means not finished, should return false
+            if(!closed[i]) 
                 return false;
         }
         return true;
     }
     
+    
+    /**
+     * The method globalState turns the process red, 
+     * records the local state, and sends the Marker
+     * message on all outgoing channels
+     */
+    @Override
+    public synchronized void globalState() {
+        myColor = RED;
+        localState();     // Record local State;
+        try {
+            sendToNeighbors(Tag.MARKER, "ChandyLamport");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }    
+
+    /**
+     * This method take a snapshot of local process.
+     * That is, the vector clock.
+     */
+    @Override
+    public void localState() {
+        System.out.println(String.format("[Node %d] %s", myId, vClock.toString()));
+    }
+    
     private int idToIndex(int nodeId){
         return Collections.binarySearch(linker.getNeighbors(), new Node(nodeId));
     }
-
+    
 }

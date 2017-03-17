@@ -1,13 +1,13 @@
 package helpers;
 
-import aos.Process;
 import aos.MAP;
+import aos.Process;
 import aos.SpanTree;
-import snapshot.Camera;
+import snapshot.RecvCamera;
 
 public interface ProcessFactory {
-    public abstract Process createProcess();
-    public abstract SpanTree createSpanTree();
-    public abstract MAP createMAP();
-    public abstract Camera createCamera();
+    public Process createProcess();
+    public SpanTree createSpanTree();
+    public MAP createMAP();
+    public RecvCamera createCamera();
 }

@@ -3,16 +3,18 @@ package aos;
 import java.io.IOException;
 import java.util.List;
 
+import clock.VectorClock;
 import helpers.Linker;
 
 public class Process implements MessageHandler{
     protected int numProc, myId;
     protected Linker linker;
+    protected VectorClock vClock;         // Vector Clock
     
     public Process(Linker initLinker){
         this.linker = initLinker;
         this.myId = linker.getMyId();
-        this.numProc = linker.getNeighbors().size();
+        this.numProc = linker.getNeighbors().size();   
     }
     
     /**
@@ -37,6 +39,10 @@ public class Process implements MessageHandler{
      */
     public void sendMessage(int dstId, Tag tag, String content) throws IOException{
         linker.sendMessage(dstId, tag, content);
+    }
+    
+    public void sendMessage(int dstId, Tag tag, String content, int[] vector) throws IOException{
+        linker.sendMessage(dstId, tag, content, vector);
     }
     
     /**
@@ -72,6 +78,10 @@ public class Process implements MessageHandler{
         } catch (InterruptedException e){
             System.err.println(e);
         }
+    }
+    
+    public synchronized void setVectorClock(VectorClock v) {
+        this.vClock = v;
     }
     
     /**

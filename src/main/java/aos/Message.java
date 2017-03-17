@@ -88,6 +88,10 @@ public class Message implements Serializable{
     public void setContent(String content) {
         this.content = content;
     }
+    
+    public boolean containsVector(){
+        return (v.length != 0);
+    }
 
     @Override 
     public String toString(){
