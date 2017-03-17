@@ -1,5 +1,7 @@
 package snapshot;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -136,10 +138,25 @@ public class RecvCamera extends MAP implements Camera, CamUser {
     @Override
     public void localState() {
         System.out.println(String.format("[Node %d] Local State: %s", myId, vClock.toString()));
+        writeToFile("configuration-"+myId+".out",vClock.toString());
     }
     
     private int idToIndex(int nodeId){
         return Collections.binarySearch(linker.getNeighbors(), new Node(nodeId));
+    }
+    
+    
+    private void writeToFile(String address, String state){
+    	File f = new File(address);
+		try{
+			FileWriter out = new FileWriter(f,true);
+			out.write(state);
+			out.write("\r\n");
+			out.close();
+			
+		}catch(Exception e){
+			System.out.println(e.getMessage());
+		}
     }
     
 }
