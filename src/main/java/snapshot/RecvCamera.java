@@ -135,7 +135,7 @@ public class RecvCamera extends MAP implements Camera, CamUser {
      */
     @Override
     public void localState() {
-        System.out.println(String.format("[Node %d] %s", myId, vClock.toString()));
+        System.out.println(String.format("[Node %d] Local State: %s", myId, vClock.toString()));
     }
     
     private int idToIndex(int nodeId){
