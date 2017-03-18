@@ -114,6 +114,9 @@ public class VectorClockUtilityTest {
         S3.setVector(new int[]{35, 75, 41, 76, 21, 0});
         S4.setVector(new int[]{34, 44, 36, 52, 43, 0});
         
+        System.out.println(S0.formatToOutput());
+        
+        
 
         assertFalse(S0.happensBefore(S1));
         assertFalse(S0.happensBefore(S2));

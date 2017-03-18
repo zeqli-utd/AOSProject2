@@ -111,7 +111,9 @@ public class SpanTree extends Process {
                 break;
             }
         }
-        System.out.println(String.format("[Node %d] [SNAPSHOT] ***** HALT *****", myId));
+        if (snapshotPermission.availablePermits() == 0){
+            System.out.println(String.format("[Node %d] [SNAPSHOT] ***** HALT *****", myId));
+        }
     }
     
     /**

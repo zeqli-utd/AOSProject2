@@ -7,7 +7,6 @@ import aos.MAP;
 import aos.Process;
 import aos.SpanTree;
 import clock.VectorClock;
-import snapshot.Camera;
 import snapshot.RecvCamera;
 
 /**
@@ -36,6 +35,7 @@ public class ConcreteProcessFactory implements ProcessFactory{
         Linker linker = registry.getLinker();
         Process proc = new Process(linker);
         proc.setVectorClock(getDefaultVectorClock());
+        proc.setRegistry(registry);
         return proc;
     }
 
@@ -44,6 +44,7 @@ public class ConcreteProcessFactory implements ProcessFactory{
         Linker linker = registry.getLinker();
         SpanTree proc = new SpanTree(linker);
         proc.setVectorClock(getDefaultVectorClock());
+        proc.setRegistry(registry);
         return proc;
     }
 
@@ -56,6 +57,7 @@ public class ConcreteProcessFactory implements ProcessFactory{
         Linker linker = registry.getLinker();
         MAP proc = new MAP(linker, getGlobalParameters());
         proc.setVectorClock(getDefaultVectorClock());
+        proc.setRegistry(registry);
         return proc;
     }
 
@@ -68,6 +70,7 @@ public class ConcreteProcessFactory implements ProcessFactory{
         Linker linker = registry.getLinker();
         RecvCamera proc = new RecvCamera(linker, getGlobalParameters());
         proc.setVectorClock(getDefaultVectorClock());
+        proc.setRegistry(registry);
         return proc;
     }
     

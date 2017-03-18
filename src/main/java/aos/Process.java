@@ -7,11 +7,14 @@ import java.util.concurrent.Semaphore;
 
 import clock.VectorClock;
 import helpers.Linker;
+import helpers.Repository;
 
 public class Process implements MessageHandler{
     protected int numProc, myId;
     protected Linker linker;
     protected VectorClock vClock;         // Vector Clock
+    
+    protected Repository registry;
     
     /**
      * Snapshot for termination detection
@@ -161,6 +164,10 @@ public class Process implements MessageHandler{
     
     public synchronized void setVectorClock(VectorClock v) {
         this.vClock = v;
+    }
+    
+    public synchronized void setRegistry(Repository registry){
+        this.registry = registry;
     }
     
     /**

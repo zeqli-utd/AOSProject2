@@ -36,6 +36,16 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
         List<Node> neighbors = new LinkedList<>();
         Path file = Paths.get(absolutePath);
         
+        // Store file name
+        String filename = file.getFileName().toString();
+        String fileDir = file.getParent().toString();
+        repo.putObject(RKey.KEY_CONFIG_FILE_NAME.name(), filename);
+        repo.putObject(RKey.KEY_CONFIG_FILE_DIRECTORY.name(), fileDir);
+        System.out.println(filename);
+        System.out.println(fileDir);
+        
+        
+        
         StringBuilder logger = new StringBuilder();
         logger.append(String.format("[Node %d] [Config Loader] Global Paramaters:\n", myId));
         

@@ -64,7 +64,7 @@ public class Server {
                 Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
                 executorService.execute(task);
             }
-            //linker.multicast(linker.getNeighbors(), Tag.APP, "Test");
+            linker.multicast(linker.getNeighbors(), Tag.VECTOR, "Test");
             
             // 3. Wait for spanning tree setup
             proc.waitForDone();  
@@ -72,12 +72,13 @@ public class Server {
             // 4. Setup Chandy Lamport Protocol
             SnapshotThread chandyLamportProtocol = new SnapshotThread(myId, proc);
             executorService.execute(chandyLamportProtocol);
-            
+            Thread.sleep(5000);
+           
             // 5. Setup MAP protocol
             MAPThread mapProtocol = new MAPThread(myId, proc);
             executorService.execute(mapProtocol);
             
-            Thread.sleep(10000);
+            Thread.sleep(30000);
             linker.close();
             executorService.shutdown();
             

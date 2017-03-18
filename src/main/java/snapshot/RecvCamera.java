@@ -15,6 +15,7 @@ import aos.Message;
 import aos.Node;
 import aos.Tag;
 import helpers.Linker;
+import helpers.RKey;
 
 //Pj is a neighbor of Pi if there is a channel from Pi to Pj
 
@@ -210,8 +211,8 @@ public class RecvCamera extends MAP implements Camera, CamUser {
         //  11 - ACTIVE , EMPTY
         if (mapState == MAP.ACTIVE)
             snapshotForMap[myId] += 10;
-		
-        writeToFile("configuration-"+myId+".out",vClock.toString());
+		String configurationFilename = ((String) registry.getObject(RKey.KEY_CONFIG_FILE_NAME.name())).replaceAll(".txt", "");
+        writeToFile(String.format("%s-%d.out", configurationFilename, myId), vClock.formatToOutput());
     }
     
     private int idToIndex(int nodeId){

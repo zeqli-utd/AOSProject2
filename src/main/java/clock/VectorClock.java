@@ -110,4 +110,13 @@ public class VectorClock {
     public String toString(){
         return String.format("ProcessId = %d, Vector %s", id, Arrays.toString(v));
     }
+    
+    public String formatToOutput(){
+        int[] out = Arrays.copyOf(v, v.length - 1);
+        StringBuilder sb = new StringBuilder();
+        for (int i : out){
+            sb.append(i).append(" ");
+        }
+        return sb.toString().trim();
+    }
 }
