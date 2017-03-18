@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-import aos.GlobalParams;
+import aos.PropertyType;
 import aos.Node;
 
 public class MAPConfigurationLoader implements ConfigurationLoader {
@@ -31,7 +31,7 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
     }
 
     public void loadConfigFromAbs(String absolutePath, int myId) {
-        Map<GlobalParams, Integer> globalParams= new EnumMap<>(GlobalParams.class);
+        Map<PropertyType, Integer> globalParams= new EnumMap<>(PropertyType.class);
         List<Node> hosts = new LinkedList<>();
         List<Node> neighbors = new LinkedList<>();
         Path file = Paths.get(absolutePath);
@@ -74,7 +74,7 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                         
                      } else {
                         int value = Integer.parseInt(params[i]);
-                         GlobalParams key = GlobalParams.values()[i];
+                         PropertyType key = PropertyType.values()[i];
                          globalParams.put(key, value);
                          logger.append(String.format("%s = %d\n", key, value));
                      }
@@ -87,13 +87,13 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 // so add 1 to make it inclusive
                 // Always set node 0 as active
                 int value = (myId == 0) ? 1 : ThreadLocalRandom.current().nextInt(0, 2);
-                GlobalParams key = GlobalParams.LOCAL_STATE;
+                PropertyType key = PropertyType.LOCAL_STATE;
                 globalParams.put(key, value);
                 logger.append(String.format("%s = %d\n", key, value));
                 break;
             }
             
-            n = globalParams.get(GlobalParams.NUM_NODES);
+            n = globalParams.get(PropertyType.NUM_NODES);
             
             // Load host list.
             while (n != 0 && (line = reader.readLine()) != null) {
@@ -114,7 +114,7 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 throw new IOException("Insufficent valid lines in config file.");
             }
             
-            n = globalParams.get(GlobalParams.NUM_NODES);
+            n = globalParams.get(PropertyType.NUM_NODES);
             
             // Load neighbors
             while (n != 0 && (line = reader.readLine()) != null) {
@@ -123,7 +123,7 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 if(line.length() == 0)
                     continue;
                 String[] neighborIds = line.split("\\s+");
-                int currentId = globalParams.get(GlobalParams.NUM_NODES) - n;
+                int currentId = globalParams.get(PropertyType.NUM_NODES) - n;
                 
                 if(currentId == myId){
                     for(int i = 0; i < neighborIds.length; i++){
@@ -148,7 +148,7 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
         }
     }
     
-    public void doConfigure(Map<GlobalParams, Integer> globalParams, List<Node> neighbors){
+    public void doConfigure(Map<PropertyType, Integer> globalParams, List<Node> neighbors){
         Collections.sort(neighbors);
         repo.putObject(RKey.KEY_NEIGHBORS.name(), neighbors);
         repo.putObject(RKey.KEY_GLOB_PARAMS.name(), globalParams);

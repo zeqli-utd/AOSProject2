@@ -7,7 +7,7 @@ package aos;
  * @author zeqing
  *
  */
-public enum GlobalParams {
+public enum PropertyType {
     NUM_NODES,          // "Number of Nodes";
     MIN_PER_ACTIVE,     // "Minimum number of active node at each round";
     MAX_PER_ACTIVE,     // "Maximum number of active node at each round";

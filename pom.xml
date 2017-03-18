@@ -3,7 +3,6 @@
   <groupId>edu.utdallas.commons</groupId>
   <artifactId>map</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>project2</name>
   <dependencies>
   	<dependency>
   		<groupId>org.apache.logging.log4j</groupId>
@@ -23,4 +22,5 @@
     </dependency>
   </dependencies>
   
+  <name>Distributed System</name>
 </project>

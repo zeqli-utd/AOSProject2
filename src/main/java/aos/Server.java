@@ -16,13 +16,14 @@ import snapshot.RecvCamera;
 import snapshot.SnapshotThread;
 /**
  * 
- * @author Zeqing Li, zxl165030, The University of Texas at Dallas
- *
+ * @author Zeqing Li, The University of Texas at Dallas
+ * @author Ming Sun, The University of Texas at Dallas
+ * @author Jingyi Liu, The University of Texas at Dallas
  */
 public class Server {    
     /**
-     * @param args
-     *            args[0] - port, args[1] - node id, args[2] - file
+     * 
+     * @param args <port> <node id> <config-file>
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
@@ -64,7 +65,6 @@ public class Server {
                 Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
                 executorService.execute(task);
             }
-            linker.multicast(linker.getNeighbors(), Tag.VECTOR, "Test");
             
             // 3. Wait for spanning tree setup
             proc.waitForDone();  

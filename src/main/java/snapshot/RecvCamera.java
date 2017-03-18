@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import aos.GlobalParams;
+import aos.PropertyType;
 import aos.MAP;
 import aos.Message;
 import aos.Node;
@@ -40,9 +40,9 @@ public class RecvCamera extends MAP implements Camera, CamUser {
      * @param initLinker
      * @param globalParams
      */
-    public RecvCamera(Linker initLinker, Map<GlobalParams, Integer> globalParams) {
+    public RecvCamera(Linker initLinker, Map<PropertyType, Integer> globalParams) {
         super(initLinker, globalParams);
-        this.SNAP_SHOT_DELAY = globalParams.get(GlobalParams.SNAP_SHOT_DELAY);
+        this.SNAP_SHOT_DELAY = globalParams.get(PropertyType.SNAP_SHOT_DELAY);
         reset();
     }
     
@@ -105,7 +105,7 @@ public class RecvCamera extends MAP implements Camera, CamUser {
         
         
         if (closed[srcIdx] == true){
-            System.out.println(String.format("[Node %d] [Snapshot] Warning!!! Duplicate Marker %s", myId, msg.toString()));
+            System.out.println(String.format("[Node %d] [Snapshot] Warning!!! Duplicate Marker %s\n", myId, msg.toString()));
         }
         
         // Set closed[srcId] to true because 
@@ -116,7 +116,6 @@ public class RecvCamera extends MAP implements Camera, CamUser {
         //determines whether the process has recorded its local state and all incoming channels 
         if (isDone()){  
             
-            terminateRecording();
             
             StringBuilder logger = new StringBuilder();
             logger.append(String.format("[Node %d] Channel State : In-Transit Messages\n", myId));
@@ -130,6 +129,7 @@ public class RecvCamera extends MAP implements Camera, CamUser {
                 logger.append("\n");
             }
             System.out.println(logger.toString());
+            terminateRecording();
         } 
     }
     
@@ -139,7 +139,7 @@ public class RecvCamera extends MAP implements Camera, CamUser {
      */
     private void terminateRecording(){
         
-     // When recording is done. Collect channel state
+        // When recording is done. Collect channel state
         // Cannot determined here
         if (channelState == CHANNEL_EMPTY)
             snapshotForMap[myId] += 1;
@@ -148,12 +148,13 @@ public class RecvCamera extends MAP implements Camera, CamUser {
         snapshotList.add(snapshotForMap);
         available.release();
         
-        StringBuilder logger = new StringBuilder();
-        logger.append(String.format("[Node %d] [Snapshot] ***** Done. ***** ", myId));
-        logger.append(String.format("MAP snapshot = %s",  Arrays.toString(snapshotForMap)));
-        logger.append(String.format("Vector snapshot = %s",  Arrays.toString(snapshotForVector)));
+        System.out.println(String.format("[Node %d] [Snapshot] *** SNAPSHOT TAKEN *** " +
+                "MAP Snapshot = %s Vector snapshot = %s\n", 
+                myId, Arrays.toString(snapshotForMap), Arrays.toString(snapshotForVector)
+        ));
+        
+        // Prepare to next snapshot
         reset();
-        System.out.println(logger.toString());
     }
     
     /**

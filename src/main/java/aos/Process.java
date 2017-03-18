@@ -14,6 +14,9 @@ public class Process implements MessageHandler{
     protected Linker linker;
     protected VectorClock vClock;         // Vector Clock
     
+    /**
+     * Central repository to retrieve and store helpful settings
+     */
     protected Repository registry;
     
     /**
@@ -67,8 +70,10 @@ public class Process implements MessageHandler{
      * @throws IOException 
      */
     public synchronized void handleMessage(Message msg, int srcId, Tag tag) throws IOException{
-        if(tag == Tag.APP) System.out.println("This is application message");
-        else System.out.println(String.format("[Node %d] [Request] content=%s", myId, msg.toString()));
+        if(tag == Tag.APP) 
+            System.out.println("This is application message");
+        else 
+            System.out.println(String.format("[Node %d] [Request] content=%s", myId, msg.toString()));
     }
     
     /**
@@ -104,7 +109,6 @@ public class Process implements MessageHandler{
             linker.sendMessage(dstId, tag, content, scalarClock);
         }
     }
-    
     
     /**
      * Broadcast messages to all its neighbors

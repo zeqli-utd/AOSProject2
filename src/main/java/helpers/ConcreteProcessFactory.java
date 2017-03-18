@@ -2,7 +2,7 @@ package helpers;
 
 import java.util.Map;
 
-import aos.GlobalParams;
+import aos.PropertyType;
 import aos.MAP;
 import aos.Process;
 import aos.SpanTree;
@@ -23,7 +23,7 @@ public class ConcreteProcessFactory implements ProcessFactory{
     }
     
     public VectorClock getDefaultVectorClock(){
-        int topologySize = getGlobalParameters().get(GlobalParams.NUM_NODES);
+        int topologySize = getGlobalParameters().get(PropertyType.NUM_NODES);
         int myId = registry.getLinker().getMyId();
         VectorClock v = new VectorClock(topologySize, myId); 
         v.tick(); // Initialization
@@ -74,10 +74,10 @@ public class ConcreteProcessFactory implements ProcessFactory{
         return proc;
     }
     
-    private Map<GlobalParams, Integer> getGlobalParameters(){
+    private Map<PropertyType, Integer> getGlobalParameters(){
         @SuppressWarnings("unchecked")
-        Map<GlobalParams, Integer> globalParams = 
-                (Map<GlobalParams, Integer>) registry.getObject(
+        Map<PropertyType, Integer> globalParams = 
+                (Map<PropertyType, Integer>) registry.getObject(
                         RKey.KEY_GLOB_PARAMS.name());
         return globalParams;
     }

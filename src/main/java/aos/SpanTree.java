@@ -19,27 +19,49 @@ public class SpanTree extends Process {
     private ArrayList<Integer> children = new ArrayList<>();
     
     private int numReports = 0;        // Message received from neighbors
-    private boolean done = false;
+    
+    /**
+     * Indicate whether tree constructed or not
+     */
+    private boolean isTreeConstructed = false;
     
     
     
     // Broadcast Convergecast Controls
     private ArrayList<Integer> pending = new ArrayList<>();
+    
+    /**
+     * Control variable to indicate whether 
+     * or not a node has been set up a list of listening children
+     * 
+     */
     private boolean pendingSet = false;
+    
+    /**
+     * Control variable to invoke computeGlobal method
+     * True if a node received a TREE_BROADCAST message
+     * 
+     */
     private boolean isAwake = false;
 
     
     public SpanTree(Linker initLinker){
         super(initLinker);
         boolean isRoot = (myId == 0);
+        reset();
         if (isRoot){
             parent = initLinker.getMyId();
             if(initLinker.getNeighbors().size() == 0){
-                done = true;
+                isTreeConstructed = true;
             } else {
                 buildSpanTree();
             }
         }
+    }
+    
+    private void reset() {
+        this.isAwake = false;
+        this.pendingSet = false;
     }
     
     /**
@@ -61,8 +83,10 @@ public class SpanTree extends Process {
      * @throws InterruptedException 
      */
     public synchronized void computeGlobal() throws IOException, InterruptedException{
+        String logInfo;
         
-        // Parent node trigger the computeGlobal event
+        // 1. Root trigger the system global computation event
+        // 2. Children waiting for TREE_BROADCAST starting signal. 
         if (parent == myId){ // Root node
             sendChildren(Tag.TREE_BROADCAST, "Broadcast");
         } else {
@@ -70,8 +94,11 @@ public class SpanTree extends Process {
                 procWait(); // Thread awake by parent's broadcast message 
             }
         }
+        // Check SnapshotListSize
+        logInfo = String.format("[Node %d] [Tree] %d Snapshot Taken, Collecting Snapshot-%d... \n", myId, snapshotList.size(), snapshotIndex);
+        System.out.println(logInfo);
         
-        // Setup snapshot status
+        // 3. Setup snapshot status
         pending = new ArrayList<>();
         pending.addAll(children);           
         pendingSet = true;
@@ -85,34 +112,45 @@ public class SpanTree extends Process {
         }
        
         if (parent == myId){    // Root node
-            System.out.println(
-                    String.format("[Node %d] [Tree] ***** SNAPSHOT RESULT ***** %s", 
-                            myId, Arrays.toString(snapshotForMap)));
-            checkGloablState();
+            logInfo = String.format("[Node %d] [Tree] ***** SNAPSHOT-%d %s *****\n", myId, snapshotIndex, Arrays.toString(snapshotList.get(snapshotIndex)));
+            System.out.println(logInfo);
+            
+            checkGlobalMapProtocolStates();
         } else {  // Non-root node
-            System.out.println(
-                    String.format("[Node %d] [Tree] Children Finished, "
-                            + "Cast to Parent(%d) %s", 
-                            myId, parent, Arrays.toString(snapshotForMap)));
+            logInfo = String.format("[Node %d] [Tree] Children Done. Cast to Parent(%d) %s\n", myId, parent, Arrays.toString(snapshotForMap));
+            System.out.println(logInfo);
+                        
             sendMessageWithVector(parent, Tag.TREE_CONVERGE, "", snapshotList.get(snapshotIndex));
         }   
         snapshotIndex++;
+        
+        // Reset
+        reset();
     }
     
     /**
      * When all nodes are passive and all channels are empty.
      * Do not grant permission.
      */
-    private void checkGloablState() {
+    private void checkGlobalMapProtocolStates() {
+        String logInfo;
         int[] globalMapState = snapshotList.get(snapshotIndex);
+        int terminationCount = 0;
         for (int i = 0; i < globalMapState.length - 1; i++){
-            if (globalMapState[i] != 1){
-                grantSnapshotPermisson();
-                break;
+            if (globalMapState[i] == 1){
+                logInfo = String.format("[Node %d] [SNAPSHOT] ++++++++++ Node %d Termination Detected ++++++++++", myId, i);
+                System.out.println(logInfo);
+                
+                terminationCount++;
             }
         }
-        if (snapshotPermission.availablePermits() == 0){
-            System.out.println(String.format("[Node %d] [SNAPSHOT] ***** HALT *****", myId));
+        if (terminationCount == vClock.getTopologySize()){
+            if (snapshotPermission.availablePermits() <= 0){
+                logInfo = String.format("[Node %d] [SNAPSHOT] ***** HALT *****", myId);
+                System.out.println(logInfo);
+            }
+        } else {
+            grantSnapshotPermisson();
         }
     }
     
@@ -122,7 +160,7 @@ public class SpanTree extends Process {
      * @throws InterruptedException
      */
     public synchronized void waitForDone () throws InterruptedException { 
-        while (!done){
+        while (!isTreeConstructed){
             procWait();
         }
     }
@@ -157,28 +195,22 @@ public class SpanTree extends Process {
     }
     
 
-    
+    /**
+     * Handle message carring tag TREE_CONVERGECAST
+     * @param msg
+     * @param srcId
+     * @param tag
+     * @throws IOException
+     */
     public synchronized void handleConvergeCast(Message msg, int srcId, Tag tag) throws IOException{
-        String debugMsg = String.format("[Node %d] [Tree] Collect Snapshot from %d %s", 
-                myId, msg.getSrcId(), Arrays.toString(msg.getVector()));
         while (!pendingSet) {
             procWait();
         }
         
-        if (!msg.containsVector()){
-            throw new IOException("Missing Vector");
-        }
-        System.out.println(debugMsg);
+        System.out.println(String.format("[Node %d] [Tree] Collect Snapshot from %d %s", myId, msg.getSrcId(), Arrays.toString(msg.getVector()) ));
         
-        int[] mapState = snapshotList.get(snapshotIndex);
-        
-        boolean succeed = VectorClock.flatMerge(mapState, msg.getVector());
-        if (!succeed){
-            throw new IOException("Vector mismatch " + 
-                    snapshotForMap.toString() + " " + msg.getVector().toString());
-        }
-            
-        
+        VectorClock.flatMerge(snapshotList.get(snapshotIndex), msg.getVector());
+
         pending.remove(new Integer(srcId));
         if (pending.isEmpty()){
             notifyAll();  // Notify computeGlobal() cast message up
@@ -215,8 +247,6 @@ public class SpanTree extends Process {
             // If the parent reference already set. Reject the request
             sendMessage(srcId, Tag.TREE_REJECT, "Reject");
         }
-
-        //System.out.println(String.format("[Node %d] [Invitation: %d/%d] %s", myId, numReports, numProc, msg.toString()));
     }
     
  // Handle Accept and Reject messages.
@@ -225,14 +255,9 @@ public class SpanTree extends Process {
         if (tag.equals(Tag.TREE_ACCEPT))
             children.add(srcId);
         if (numReports == numProc) {
-            done = true;
-            System.out.println(String.format("[Node %d] "
-                    + "[SpanTree Constructed %d/%d] "
-                    + "Parent=%d Children=%s", 
-                    myId, numReports, numProc, parent, children.toString()));
+            isTreeConstructed = true;
+            System.out.println(String.format("[Node %d] [SpanTree Constructed %d/%d] Parent=%d Children=%s", myId, numReports, numProc, parent, children.toString()));
             notify();    // Notify wait for done.
         }
-
-        //System.out.println(String.format("[Node %d] [Invite.Response %d/%d] %s", myId, numReports, numProc, msg.toString()));
     }
 }

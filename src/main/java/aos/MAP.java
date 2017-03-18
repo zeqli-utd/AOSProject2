@@ -27,7 +27,7 @@ public class MAP extends SpanTree{
     /**
      * Number of messages have been sent
      */
-    private volatile static int msgNum = 0;
+    private volatile static int messageSentCount = 0;
     
     /**
      * Current node state. Either active(True) or passive(False)
@@ -64,42 +64,46 @@ public class MAP extends SpanTree{
      */
     public final int MIN_SEND_DELAY; 
     
-    public MAP(Linker link, Map<GlobalParams, Integer> globalParams){
+    public MAP(Linker link, Map<PropertyType, Integer> globalParams){
         super(link);
-        this.MAX_NUMBER = globalParams.get(GlobalParams.MAX_NUMBER);
-        this.MIN_PER_ACTIVE = globalParams.get(GlobalParams.MIN_PER_ACTIVE);
-        this.MAX_PER_ACTIVE = globalParams.get(GlobalParams.MAX_PER_ACTIVE);
-        this.MIN_SEND_DELAY = globalParams.get(GlobalParams.MIN_SEND_DELAY);
-        this.state = (globalParams.get(GlobalParams.LOCAL_STATE) == 1);
+        this.MAX_NUMBER = globalParams.get(PropertyType.MAX_NUMBER);
+        this.MIN_PER_ACTIVE = globalParams.get(PropertyType.MIN_PER_ACTIVE);
+        this.MAX_PER_ACTIVE = globalParams.get(PropertyType.MAX_PER_ACTIVE);
+        this.MIN_SEND_DELAY = globalParams.get(PropertyType.MIN_SEND_DELAY);
+        this.state = (globalParams.get(PropertyType.LOCAL_STATE) == 1);
         this.latch = new CountDownLatch(1);
     }
     
     
     /**
      * Send messages to selected nodes
+     * @throws IOException 
+     * @throws InterruptedException 
      * 
      * @throws Exception
      */
-    public synchronized void sendApplicationMessage() throws Exception {
+    public void sendApplicationMessage() throws IOException, InterruptedException {
         // Init each interval
         latch = new CountDownLatch(1);       // reset latch
-        prevState = PASSIVE;
+//        prevState = PASSIVE;
         
         List<Integer> sendList = generateSendList();
-        msgNum += sendList.size();
         
-        System.out.println(String.format("[Node %d] [MAP] Send messages to %s",myId, sendList.toString()));
-        //send to the neighbor
+        
+        System.out.format("[Node %d] [MAP] Send messages to %s\n", myId, sendList.toString());
+        
         for(int dstId : sendList){
             scalarClock++;
             sendMessageWithScalar(dstId, Tag.APP, "", scalarClock);
-            System.out.println(String.format("[Node %d] [MAP]"
-                    + "[From %d to %d] [ScalarClock %d]",myId, myId, dstId, scalarClock ));
+            messageSentCount++;
+            Thread.sleep(MIN_SEND_DELAY);
+            System.out.println(String.format( "[Node %d] [MAP] [From %d to %d] [ScalarClock %d]\n",
+                    myId, myId, dstId, scalarClock ));
         }
         
         state = PASSIVE;
         
-        System.out.println(String.format("[Node %d] [MAP] [Total %d Message Has Been Sent]",myId, msgNum));        
+        System.out.println(String.format("[Node %d] [MAP] [Total %d Message Has Been Sent]\n", myId, messageSentCount));        
     }
     
     
@@ -119,17 +123,17 @@ public class MAP extends SpanTree{
     
     
     public void handleApplicationMessage(Message msg, int srcId, Tag tag){
-        if (msgNum < MAX_NUMBER) {              // Qualified to send message 
-            
+        if (messageSentCount < MAX_NUMBER) {              // Qualified to send message 
             if (state == PASSIVE) {
                 state = ACTIVE;
-                System.out.println(String.format("[Node %d] [MAP] State has been changed to active.",myId));
+                latch.countDown();
+                System.out.println(String.format("[Node %d] [MAP] State has been changed to active.\n", myId));
                 receiveAction(msg.getScalar());
             } else {                           // Received message whilst being active 
-                System.out.println(String.format("[Node %d] [MAP] Receive message when active %s",myId, msg.toString()));
-                prevState = ACTIVE;                
+                System.out.println(String.format("[Node %d] [MAP] Receive message when active %s\n",myId, msg.toString()));
+                // prevState = ACTIVE;                
             }
-            latch.countDown();
+            
         }
         // Ignore the messages if out of message quota
     }
@@ -147,8 +151,7 @@ public class MAP extends SpanTree{
         Random random = new Random();
         int max = MAX_PER_ACTIVE;
         int min = MIN_PER_ACTIVE;
-        int numMsg = random.nextInt((max-min)+1)+min;
-        return numMsg;
+        return random.nextInt((max-min)+1)+min;
     }
     
 
@@ -167,15 +170,6 @@ public class MAP extends SpanTree{
         return sendList;
     }
     
-//    
-//    //change state once receive message or finish sending messages
-//    public void toggleState() {
-//        // Change state from active to passive
-//        // or change state from passive to active
-//        state = !state;
-//    }
-//    
-    
     //get clock value
     public int getClock() {
         return scalarClock;
@@ -185,7 +179,7 @@ public class MAP extends SpanTree{
     //determine stop or not
     public boolean isStop()  {
         
-        if (msgNum < MAX_NUMBER) {
+        if (messageSentCount < MAX_NUMBER) {
             return false;
         } else {
             state = PASSIVE;
@@ -208,7 +202,6 @@ public class MAP extends SpanTree{
     
     public void await() throws InterruptedException{
         latch.await();
-        state = ACTIVE;
     }
 
 
