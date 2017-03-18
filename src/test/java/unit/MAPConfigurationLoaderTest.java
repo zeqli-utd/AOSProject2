@@ -4,13 +4,16 @@ import java.io.File;
 
 import org.junit.Test;
 
-import aos.MAP;
-import aos.Protocol;
 import helpers.ConfigurationLoader;
 import helpers.MAPConfigurationLoader;
+import helpers.Registry;
+import helpers.Repository;
 
 public class MAPConfigurationLoaderTest {
-    ConfigurationLoader configLoader = new MAPConfigurationLoader();
+    /* Load configuration file */
+    Repository registry = new Registry();   // Manage system variables              
+    ConfigurationLoader configLoader = 
+            new MAPConfigurationLoader(registry);
     
     @Test
     public void testConfig() {
@@ -19,9 +22,7 @@ public class MAPConfigurationLoaderTest {
         
         for(int myId = 0; myId < 5; myId++){
             System.out.println(String.format("===== Node %d Configuration =====", myId));
-            Protocol proto = new MAP(myId, "MAP" + myId);
-            configLoader.loadConfigFromAbs(file.getAbsolutePath(), myId, proto);
-            System.out.println(proto.toString());
+            configLoader.loadConfigFromAbs(file.getAbsolutePath(), myId);
         }
     }
 

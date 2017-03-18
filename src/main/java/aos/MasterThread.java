@@ -17,7 +17,7 @@ public class MasterThread implements Runnable {
     public void run() {
         try {
             process.computeGlobal();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }

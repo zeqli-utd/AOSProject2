@@ -16,80 +16,90 @@ import helpers.Linker;
  */
 public class MAP extends SpanTree{
     
-    private List<Integer> sendList; 
-    private static int ScalarClock = 0;
+    public static final boolean ACTIVE = true;
+    public static final boolean PASSIVE = false;
+    
+    /**
+     * Logic Clock
+     */
+    private static int scalarClock = 0;
+    
+    /**
+     * Number of messages have been sent
+     */
     private volatile static int msgNum = 0;
     
-    private volatile boolean active = false;
-    private volatile boolean prevState = false;
-    private CountDownLatch latch = null;
+    /**
+     * Current node state. Either active(True) or passive(False)
+     */
+    protected volatile boolean state = false;
     
-    private final int MAX_NUMBER;
-    private final int MIN_PER_ACTIVE;     // "Minimum number of active node at each round";
-    private final int MAX_PER_ACTIVE;         // "Maximum number of active node at each round";
-    private final int MIN_SEND_DELAY;         // "Minimum number of send interval";
+    /**
+     * Previous node state.
+     */
+    protected volatile boolean prevState = false;
     
-    // private Map<GlobalParams, Integer> globalParams;   // MAP protocol control variables
+    /**
+     * A latch to control send event. Count down when current node receives a message from a peer.
+     */
+    private CountDownLatch latch = null;      // Control consecutive active state
     
+    /**
+     * Maximum number of messages a node can send beform it permenantly halt 
+     */
+    public final int MAX_NUMBER;
     
-    //public String name;
+    /**
+     * Minimum number of active node at each round
+     */
+    public final int MIN_PER_ACTIVE;     
     
-    //public boolean isRoot;
+    /**
+     * Maximum number of active node at each round
+     */
+    public final int MAX_PER_ACTIVE;        
+    
+    /**
+     * Minimum number of send interval between two consecutive active state.
+     */
+    public final int MIN_SEND_DELAY; 
     
     public MAP(Linker link, Map<GlobalParams, Integer> globalParams){
         super(link);
-        // , String name 
-        // this.isRoot = isRoot;
-        //this.name = name;
-        //this.globalParams = globalParams;
         this.MAX_NUMBER = globalParams.get(GlobalParams.MAX_NUMBER);
         this.MIN_PER_ACTIVE = globalParams.get(GlobalParams.MIN_PER_ACTIVE);
         this.MAX_PER_ACTIVE = globalParams.get(GlobalParams.MAX_PER_ACTIVE);
         this.MIN_SEND_DELAY = globalParams.get(GlobalParams.MIN_SEND_DELAY);
-        this.active = (globalParams.get(GlobalParams.LOCAL_STATE) == 1);
+        this.state = (globalParams.get(GlobalParams.LOCAL_STATE) == 1);
         this.latch = new CountDownLatch(1);
     }
     
     
-    //send messages to selected nodes
+    /**
+     * Send messages to selected nodes
+     * 
+     * @throws Exception
+     */
     public synchronized void sendApplicationMessage() throws Exception {
         // Init each interval
         latch = new CountDownLatch(1);       // reset latch
-        prevState = false;
+        prevState = PASSIVE;
         
-        List<Node> neighbors = linker.getNeighbors();
-        getSendList(neighbors);
+        List<Integer> sendList = generateSendList();
+        msgNum += sendList.size();
         
         System.out.println(String.format("[Node %d] [MAP] Send messages to %s",myId, sendList.toString()));
-        //if node active and send less than max number
-        if( active && msgNum < MAX_NUMBER) {
-            
-            //send to the neighbor
-            for(int dstId : sendList){
-                ScalarClock++;
-                linker.sendMessage(dstId, Tag.APP, Integer.toString(ScalarClock));
-                System.out.println(String.format("[Node %d] "
-                        + "[From %d to %d] [ScalarClock %d]",myId, myId, dstId, ScalarClock ));
-                msgNum++;  
-            }
-//            for(int i = 0; i < sendList.size(); i++)
-//            {
-//                ScalarClock++;
-//                linker.sendMessage(sendList.get(i), Tag.APP, Integer.toString(ScalarClock));
-//                System.out.println(
-//                        String.format("[Node %d] [From %d to %d] [ScalarClock %d]", 
-//                                myId, myId, sendList.get(i), ScalarClock ));
-//                msgNum++;           
-//            }
-            toggleState();   // Toggle off to passive
-            
-            System.out.println(String.format("[Node %d] [Total %d Message Has Been Sent]",myId, msgNum));
-        } else if (msgNum >= MAX_NUMBER ) { //if already send max number of messages
-            active = false;
-        } else { // Inactive
-            return;
+        //send to the neighbor
+        for(int dstId : sendList){
+            scalarClock++;
+            sendMessageWithScalar(dstId, Tag.APP, "", scalarClock);
+            System.out.println(String.format("[Node %d] [MAP]"
+                    + "[From %d to %d] [ScalarClock %d]",myId, myId, dstId, scalarClock ));
         }
         
+        state = PASSIVE;
+        
+        System.out.println(String.format("[Node %d] [MAP] [Total %d Message Has Been Sent]",myId, msgNum));        
     }
     
     
@@ -99,6 +109,7 @@ public class MAP extends SpanTree{
     public void handleMessage(Message msg, int srcId, Tag tag) throws IOException{
         switch (tag){
             case APP:
+                vClock.tick();
                 handleApplicationMessage(msg, srcId, tag);
                 break;
             default: // Pass message to deeper layer
@@ -110,16 +121,13 @@ public class MAP extends SpanTree{
     public void handleApplicationMessage(Message msg, int srcId, Tag tag){
         if (msgNum < MAX_NUMBER) {              // Qualified to send message 
             
-            if (!active) {
-                
-                toggleState();
+            if (state == PASSIVE) {
+                state = ACTIVE;
                 System.out.println(String.format("[Node %d] [MAP] State has been changed to active.",myId));
-                updateScalarClock(Integer.parseInt(msg.getContent()));
-                
+                receiveAction(msg.getScalar());
             } else {                           // Received message whilst being active 
                 System.out.println(String.format("[Node %d] [MAP] Receive message when active %s",myId, msg.toString()));
-                prevState = active;
-                
+                prevState = ACTIVE;                
             }
             latch.countDown();
         }
@@ -127,17 +135,15 @@ public class MAP extends SpanTree{
     }
     
     
-  //randomly choose neighbor to send msgs
-    public Node chooseNeighbor(List<Node> neighbors)
-    {
+    // Randomly choose neighbor to send msgs
+    public Node chooseNeighbor(List<Node> neighbors) {
         Random random = new Random();
         return neighbors.get(random.nextInt(neighbors.size()));
     }
     
     
     //randomly choose how many massages will be sent
-    public int setRoundNum()
-    {
+    public int setRoundNum() {
         Random random = new Random();
         int max = MAX_PER_ACTIVE;
         int min = MIN_PER_ACTIVE;
@@ -145,113 +151,64 @@ public class MAP extends SpanTree{
         return numMsg;
     }
     
-    
-    //generate list for send
-    public void getSendList(List<Node> neighbors)
-    {
+
+    /**
+     * Random [MIN_PER_ACTIVE, MAX_PER_ACTIVE] destination nodes per interval
+     * @return Generated List
+     */
+    public List<Integer> generateSendList() {
         int numMsg = setRoundNum();
-        sendList = new ArrayList<Integer>();
-        while (numMsg != 0)
-        {
-            Node dstNeighbor = chooseNeighbor(neighbors);
+        List<Integer> sendList = new ArrayList<>();
+        while (numMsg != 0) {
+            Node dstNeighbor = chooseNeighbor(linker.getNeighbors());
             sendList.add(dstNeighbor.getNodeId());
             numMsg --;
         }
+        return sendList;
     }
     
-    
-    //change state once receive message or finish sending messages
-    public void toggleState()
-    {
-        // Change state from active to passive
-        // or change state from passive to active
-        active = !active;
-//        if(globalParams.get(GlobalParams.LOCAL_STATE) == 1)
-//        {
-//            globalParams.put(GlobalParams.LOCAL_STATE, 0);
-//        }
-//        //change state from passive to active
-//        else
-//        {
-//            globalParams.put(GlobalParams.LOCAL_STATE, 1);
-//        }
-    }
-    
+//    
+//    //change state once receive message or finish sending messages
+//    public void toggleState() {
+//        // Change state from active to passive
+//        // or change state from passive to active
+//        state = !state;
+//    }
+//    
     
     //get clock value
-    public int getClock()
-    {
-        return ScalarClock;
+    public int getClock() {
+        return scalarClock;
     }
     
     
     //determine stop or not
     public boolean isStop()  {
+        
         if (msgNum < MAX_NUMBER) {
             return false;
         } else {
-            active = false;
+            state = PASSIVE;
             return true;
         }
-        
-//        if(msgNum >= globalParams.get(GlobalParams.MAX_NUMBER))
-//        {
-//            globalParams.put(GlobalParams.LOCAL_STATE, 0);
-//            return true;
-//        }
-//        else
-//            return false;
     }
     
     //clock action for receive 
-    public void updateScalarClock(int scalarClock)
-    {
-        ScalarClock =  Math.max(ScalarClock, scalarClock);  
+    public void receiveAction(int sClock) {
+        scalarClock =  Math.max(scalarClock, sClock);  
     }
     
     /**
      * Check node status
      * @return
      */
-    public boolean isActive(){
-        return active;
-    }
-
-    /**
-     * Retrieve MAX_NUMBER
-     * @return
-     */
-    public int getMAX_NUMBER() {
-        return MAX_NUMBER;
-    }
-
-    /**
-     * Retrieve MIN_PER_ACTIVE
-     * @return
-     */
-    public int getMIN_PER_ACTIVE() {
-        return MIN_PER_ACTIVE;
-    }
-
-
-    /**
-     * Retrieve MAX_PER_ACTIVE
-     * @return
-     */
-    public int getMAX_PER_ACTIVE() {
-        return MAX_PER_ACTIVE;
-    }
-
-    /**
-     * Retrieve MIN_SEND_DELAY
-     * @return
-     */
-    public int getMIN_SEND_DELAY() {
-        return MIN_SEND_DELAY;
+    public boolean isActive() {
+        return state;
     }
     
     public void await() throws InterruptedException{
         latch.await();
+        state = ACTIVE;
     }
 
 

@@ -1,7 +1,9 @@
 package aos;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import clock.VectorClock;
 import helpers.Linker;
@@ -11,10 +13,46 @@ public class Process implements MessageHandler{
     protected Linker linker;
     protected VectorClock vClock;         // Vector Clock
     
+    /**
+     * Snapshot for termination detection
+     */
+    protected int[] snapshotForMap;
+    
+    
+    /**
+     * Snapshot for vector clock
+     */
+    protected int[] snapshotForVector;
+    
+    /**
+     * RecvCamera produce 1 snapshot, release available semaphore once.
+     */
+    protected Semaphore available;
+    
+    /**
+     * Permission to take snapshot
+     * Control by node 0.
+     */
+    protected Semaphore snapshotPermission;
+    
+    /**
+     * Snapshot history, supplied by RecvCamera
+     */
+    protected List<int[]> snapshotList;
+    
+    /**
+     * Current snapshot index node 0 are collecting
+     */
+    protected int snapshotIndex;
+    
     public Process(Linker initLinker){
         this.linker = initLinker;
         this.myId = linker.getMyId();
-        this.numProc = linker.getNeighbors().size();   
+        this.numProc = linker.getNeighbors().size();  
+        this.available = new Semaphore(0);
+        this.snapshotPermission = new Semaphore(1);
+        this.snapshotList = new ArrayList<>();
+        this.snapshotIndex = 0;
     }
     
     /**
@@ -38,12 +76,32 @@ public class Process implements MessageHandler{
      * @throws IOException
      */
     public void sendMessage(int dstId, Tag tag, String content) throws IOException{
-        linker.sendMessage(dstId, tag, content);
+        if (tag.equals(Tag.APP)){
+            vClock.sendAction();
+            linker.sendMessage(dstId, tag, content, vClock.getVector());
+        } else {
+            linker.sendMessage(dstId, tag, content);
+        }
     }
     
-    public void sendMessage(int dstId, Tag tag, String content, int[] vector) throws IOException{
-        linker.sendMessage(dstId, tag, content, vector);
+    public void sendMessageWithVector(int dstId, Tag tag, String content, int[] vector) throws IOException{
+        if (tag.equals(Tag.APP)){
+            vClock.sendAction();
+            linker.sendMessage(dstId, tag, content, vClock.getVector());
+        } else {
+            linker.sendMessage(dstId, tag, content, vector);
+        }
     }
+    
+    public void sendMessageWithScalar(int dstId, Tag tag, String content, int scalarClock) throws IOException{
+        if (tag.equals(Tag.APP)){
+            vClock.sendAction();
+            linker.sendMessage(dstId, tag, content, scalarClock, vClock.getVector());
+        } else {
+            linker.sendMessage(dstId, tag, content, scalarClock);
+        }
+    }
+    
     
     /**
      * Broadcast messages to all its neighbors
@@ -62,7 +120,10 @@ public class Process implements MessageHandler{
      */
     public Message receiveMessage(int fromId) throws IOException{
         try{
-            return linker.receiveMessage(fromId);
+            Message message = linker.receiveMessage(fromId);
+            if (message.getTag().equals(Tag.APP))
+                vClock.receiveAction(message.getVector());
+            return message;
         } catch (ClassNotFoundException e){
             e.printStackTrace();
             return null;
@@ -78,6 +139,24 @@ public class Process implements MessageHandler{
         } catch (InterruptedException e){
             System.err.println(e);
         }
+    }
+    
+    /**
+     * Request permission to run globalState() function
+     * @throws InterruptedException
+     */
+    public synchronized void requestSnapshotPermission() throws InterruptedException{
+        System.out.println(String.format("[Node %d] [SNAPSHOT] Request Permission.", myId));
+        snapshotPermission.acquire();
+    }
+    
+    /**
+     * Grant permission when at least one node is active.
+     * Control by SpanTree
+     */
+    protected synchronized void grantSnapshotPermisson(){
+        System.out.println(String.format("[Node %d] [SNAPSHOT] Grant Permission.", myId));
+        snapshotPermission.release();
     }
     
     public synchronized void setVectorClock(VectorClock v) {

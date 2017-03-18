@@ -6,8 +6,19 @@ package aos;
  *
  */
 public class Node implements Comparable<Node>{
+    /**
+     * Id of node
+     */
     private int id;
+    
+    /**
+     * Host name 
+     */
     private String hostName;
+    
+    /**
+     * Port
+     */
     private String port;
     
     public Node(int index, String hostName, String port){

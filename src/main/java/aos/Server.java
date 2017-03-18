@@ -46,7 +46,7 @@ public class Server {
         
         try {
             
-            // Setup registry.
+            // 1. Setup registry.
             @SuppressWarnings("unchecked")
             List<Node> neighbors = (List<Node>) registry.getObject(RKey.KEY_NEIGHBORS.name());
             Linker linker = new Linker(myId, neighbors);
@@ -55,7 +55,7 @@ public class Server {
             ProcessFactory factory = registry.getProcessFactory();
             
             
-            
+            // 2. Produce main thread process
             RecvCamera proc = factory.createCamera();
             
             /* Use thread pools to manage process behaviors */
@@ -64,14 +64,18 @@ public class Server {
                 Runnable task = new ListenerThread(myId, node.getNodeId(), proc);
                 executorService.execute(task);
             }
+            //linker.multicast(linker.getNeighbors(), Tag.APP, "Test");
             
-            proc.waitForDone();  // Wait for tree constructed.
+            // 3. Wait for spanning tree setup
+            proc.waitForDone();  
             
+            // 4. Setup Chandy Lamport Protocol
             SnapshotThread chandyLamportProtocol = new SnapshotThread(myId, proc);
             executorService.execute(chandyLamportProtocol);
             
-            MasterThread collector = new MasterThread(myId, proc);
-            executorService.execute(collector);
+            // 5. Setup MAP protocol
+            MAPThread mapProtocol = new MAPThread(myId, proc);
+            executorService.execute(mapProtocol);
             
             Thread.sleep(10000);
             linker.close();

@@ -10,14 +10,13 @@ import java.util.Arrays;
  */
 public class Message implements Serializable{
     
-
-
     private static final long serialVersionUID = 1L;
     
     private int srcId;
     private int dstId;
     private Tag tag;
-    private int[] v = new int[0];
+    private int[] v = new int[0];   // Vector Clock
+    private int scalar;             // Scalar Clock
     private String content;
     
     /**
@@ -89,15 +88,24 @@ public class Message implements Serializable{
         this.content = content;
     }
     
+    
+    
+    public int getScalar() {
+        return scalar;
+    }
+
+    public void setScalar(int scalar) {
+        this.scalar = scalar;
+    }
+
     public boolean containsVector(){
         return (v.length != 0);
     }
 
     @Override 
     public String toString(){
-//        if(tag.equals("vector"))
-        return String.format("[%s] SOURCE = %d DST = %d CONTENT = \"%s\" VECTOR = %s", 
-                tag, this.srcId, this.dstId, this.content, Arrays.toString(v));
+        return String.format("[%s] SOURCE = %d DST = %d CONTENT = \"%s\" SCALAR = %d VECTOR = %s", 
+                tag, this.srcId, this.dstId, this.content, this.scalar, Arrays.toString(v));
     }
 
 

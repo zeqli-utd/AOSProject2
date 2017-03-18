@@ -27,10 +27,7 @@ public class ConcreteProcessFactory implements ProcessFactory{
         int topologySize = getGlobalParameters().get(GlobalParams.NUM_NODES);
         int myId = registry.getLinker().getMyId();
         VectorClock v = new VectorClock(topologySize, myId); 
-        // TODO Test only, delete
-        for (int i = 0; i < myId; i++){
-            v.tick();
-        }
+        v.tick(); // Initialization
         return v;
     }
 
