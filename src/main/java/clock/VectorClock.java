@@ -5,18 +5,27 @@ import java.util.Arrays;
 public class VectorClock {
     private int[] v;
     private int id;
-    private int nProc;
+    private int topologySize;
     
     /**
      * Create a new Vector Clock instance.
      * @param numProc Topology Size
      * @param id
      */
-    public VectorClock(int numProc, int id){
+    public VectorClock(int tSize, int id){
         this.id = id;
-        this.nProc = numProc;
-        this.v = new int[numProc];
+        this.topologySize = tSize;
+        this.v = new int[topologySize + 1];
         v[id] = 1;
+    }
+    
+    /**
+     * A copy constructor
+     * @param orig Original VectorClock Object
+     */
+    public VectorClock(VectorClock orig){
+        this(orig.getTopologySize(), orig.getId());
+        setVector(orig.getVector());  // Deep copy array
     }
     
     /**
@@ -32,7 +41,7 @@ public class VectorClock {
     }
     
     public void receiveAction(int[] sentValue){
-        for(int i = 0; i < nProc; i++){
+        for(int i = 0; i <= topologySize; i++){
             v[i] = Math.max(v[i], sentValue[i]);
         }
         v[id]++;
@@ -55,16 +64,50 @@ public class VectorClock {
         return true;
     }
     
+    /**
+     * Compare two vector clock
+     * 
+     * @param other
+     * @return
+     */
+    public boolean happensBefore(VectorClock other){
+        if (other == null || v.length != other.getVector().length)
+            return false;
+        
+        // e -> f if and only if
+        // (i = j) AND (C(e)[i] < C(f)[i]) OR (i != j) AND (C(e)[i] ¡Ü C(f)[i])
+        if (id == other.getId()) {
+            if (getValue(id) < other.getValue(id))
+                return true;
+        } else { // id != other.getId()
+            if (getValue(id) <= other.getValue(id))
+                return true;
+        }
+        return false;
+    }
+    
+    public int getId(){
+        return id;
+    }
+    
     public int getValue(int i){
         return v[i];
+    }
+    
+    public void setVector(int[] newV) {
+        this.v = newV.clone();
     }
     
     public int[] getVector(){
         return v.clone();
     }
     
+    public int getTopologySize() {
+        return topologySize;
+    }
+
     @Override
     public String toString(){
-        return Arrays.toString(v);
+        return String.format("ProcessId = %d, Vector %s", id, Arrays.toString(v));
     }
 }
