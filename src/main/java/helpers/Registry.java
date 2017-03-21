@@ -3,26 +3,39 @@ package helpers;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Registry implements Repository {
+import socket.Linker;
+
+public class Registry{
+   
+
+    private static Registry instance = null;
     
     /** 
      * The repository can also be used as an object store
      * for various objects used by different protocols.
      */
-    private Map<String, Object> objectMap;
+    private Map<String, Object> objectMap = null;
     
-    public Registry(){
-        this.objectMap = new HashMap<String, Object>();
+    
+    private Map<String, String> properties = null;
+    
+    private Registry(){
+        this.objectMap = new HashMap<>();
+        this.properties = new HashMap<>();
     }
     
+    public static synchronized Registry getInstance(){
+        if (instance == null)
+            instance = new Registry();
+        return instance;
+    }
     
     private Linker linker = null;
-    @Override
+    
     public void addLinker(Linker linker) {
         this.linker = linker;
     }
 
-    @Override
     public Linker getLinker() {
         return linker;
     }
@@ -32,7 +45,6 @@ public class Registry implements Repository {
      * @param key key, may not be null.
      * @param value object to associate with key.
      */
-    @Override
     public void putObject(final String key, final Object value){
         objectMap.put(key, value);
     }
@@ -42,21 +54,28 @@ public class Registry implements Repository {
      * @param key key, may not be null.
      * @return object associated with key or null.
      */
-    @Override
     public Object getObject(final String key) {
         return objectMap.get(key);
     }
     
-    @Override
+    public String getProperty(String key){
+        return properties.get(key);
+    }
+    
+    public void setProperty(String key, String value){
+        properties.put(key, value);
+    }
+    
     public boolean containsKey(String key){
         return objectMap.containsKey(key);
     }
+    
+    
 
-    @Override
     public ProcessFactory getProcessFactory() {
         boolean isValid = true;
         // Check all required components provided
-        if (!objectMap.containsKey(RKey.KEY_NEIGHBORS.name())){
+        if (!objectMap.containsKey(PropConst.NEIGHBORS)) {
             System.err.println("[Error] Neighbors node unset!");
             isValid = false;
         }
@@ -67,7 +86,7 @@ public class Registry implements Repository {
         }
         
         if (isValid) {
-            return new ConcreteProcessFactory(this);
+            return new ConcreteProcessFactory();
         } else {
             return null;
         }

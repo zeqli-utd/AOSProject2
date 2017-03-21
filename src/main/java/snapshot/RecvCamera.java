@@ -7,21 +7,23 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-import aos.PropertyType;
 import aos.MAP;
 import aos.Message;
 import aos.Node;
 import aos.Tag;
-import helpers.Linker;
-import helpers.RKey;
+import clock.VectorClock;
+import helpers.PropConst;
+import socket.Linker;
 
 //Pj is a neighbor of Pi if there is a channel from Pi to Pj
 
 public class RecvCamera extends MAP implements Camera, CamUser {
     private static final int WHITE = 0;                // Initial State
     private static final int RED = 1;                  // Snapshotted
+    private static final int SET_ACTIVE = 10;
+    private static final int SET_CHANNEL_EMPTY = 1;
+    
     private int myColor = WHITE;
     
     
@@ -40,9 +42,9 @@ public class RecvCamera extends MAP implements Camera, CamUser {
      * @param initLinker
      * @param globalParams
      */
-    public RecvCamera(Linker initLinker, Map<PropertyType, Integer> globalParams) {
-        super(initLinker, globalParams);
-        this.SNAP_SHOT_DELAY = globalParams.get(PropertyType.SNAP_SHOT_DELAY);
+    public RecvCamera(Linker initLinker) {
+        super(initLinker);
+        this.SNAP_SHOT_DELAY = Integer.parseInt(prop.getProperty(PropConst.SNAP_SHOT_DELAY));
         reset();
     }
     
@@ -66,7 +68,7 @@ public class RecvCamera extends MAP implements Camera, CamUser {
     
     @Override
     // the method handleMessage gives the rule for receiving a marker message
-    public void handleMessage(Message msg, int srcId, Tag tag) throws IOException {  
+    public synchronized void handleMessage(Message msg, int srcId, Tag tag) throws IOException {  
         int srcIdx = idToIndex(srcId);
         switch (tag){
             case MARKER:
@@ -82,7 +84,7 @@ public class RecvCamera extends MAP implements Camera, CamUser {
                     channels.get(srcIdx).add(msg);     
                     channelState = CHANNEL_NON_EMPTY;
                 }
-                // intentionally no breaking, passdown Application message.
+                // intentionally no breaking, pass down application message.
             default:
                 super.handleMessage(msg, srcId, tag);
         }
@@ -100,8 +102,13 @@ public class RecvCamera extends MAP implements Camera, CamUser {
         
         // If the process is white, 
         // it turns red by invoking globalState()
-        if(myColor == WHITE)    
-            globalState();
+        if(myColor == WHITE) {   
+            try {
+                globalState();
+            } catch (InterruptedException e){
+                e.printStackTrace();
+            }
+        }
         
         
         if (closed[srcIdx] == true){
@@ -120,9 +127,7 @@ public class RecvCamera extends MAP implements Camera, CamUser {
             StringBuilder logger = new StringBuilder();
             logger.append(String.format("[Node %d] Channel State : In-Transit Messages\n", myId));
             for (int i = 0; i < numProc; i++){
-                logger.append(
-                        String.format("Channel %d: ", 
-                                linker.getNeighbors().get(i).getNodeId()));
+                logger.append(String.format("Channel %d: ", linker.getNeighbors().get(i).getNodeId()));
                 while (!channels.get(i).isEmpty()){ 
                     logger.append(channels.get(i).remove(0).toString());
                 }
@@ -142,11 +147,14 @@ public class RecvCamera extends MAP implements Camera, CamUser {
         // When recording is done. Collect channel state
         // Cannot determined here
         if (channelState == CHANNEL_EMPTY)
-            snapshotForMap[myId] += 1;
+            snapshotForMap[myId] |= SET_CHANNEL_EMPTY;
         
-        
+        // Add Map protocol snapshot to snapshot list.
         snapshotList.add(snapshotForMap);
-        available.release();
+        
+        
+        // Release semaphore to allow SpanTree to collect the snapshot.
+        available.release();             
         
         System.out.println(String.format("[Node %d] [Snapshot] *** SNAPSHOT TAKEN *** " +
                 "MAP Snapshot = %s Vector snapshot = %s\n", 
@@ -185,12 +193,15 @@ public class RecvCamera extends MAP implements Camera, CamUser {
      * records the local state, and sends the Marker
      * message on all outgoing channels
      * @throws IOException 
+     * @throws InterruptedException 
      */
     @Override
-    public synchronized void globalState() throws IOException {
+    public synchronized void globalState() throws IOException, InterruptedException {
+        mutex.acquire();
         myColor = RED;
         localState();     // Record local State;
         sendToNeighbors(Tag.MARKER, "ChandyLamport");
+        mutex.release();
     }    
 
     /**
@@ -200,26 +211,22 @@ public class RecvCamera extends MAP implements Camera, CamUser {
     @Override
     public synchronized void localState() {
         // Vector Timestamp Snapshot
-        snapshotForVector = vClock.getVector();
+        VectorClock snapshotForVectorCopy = new VectorClock(vClock);
+        snapshotForVector = snapshotForVectorCopy.getVector();
         
         // Snapshot for termination detection
-        snapshotForMap = new int[vClock.getTopologySize() + 1];
-        boolean mapState = state;
+        int topologySize = Integer.parseInt(prop.getProperty(PropConst.NUM_NODES));
+        snapshotForMap = new int[topologySize];
         
         //  00 - PASSIVE, NON-EMPTY
         //  01 - PASSIVE, EMPTY
         //  10 - ACTIVE , NON-EMPTY
         //  11 - ACTIVE , EMPTY
-        if (mapState == MAP.ACTIVE)
-            snapshotForMap[myId] += 10;
-		String configurationFilename = ((String) registry.getObject(RKey.KEY_CONFIG_FILE_NAME.name())).replaceAll(".txt", "");
-        writeToFile(String.format("%s-%d.out", configurationFilename, myId), vClock.formatToOutput());
+        if (state == MAP.ACTIVE)
+            snapshotForMap[myId] |= SET_ACTIVE;
+		String configurationFilename = prop.getProperty(PropConst.CONFIG_FILE_NAME).replaceAll(".txt", "");
+        writeToFile(String.format("%s-%d.out", configurationFilename, myId), snapshotForVectorCopy.formatToOutput());
     }
-    
-    private int idToIndex(int nodeId){
-        return Collections.binarySearch(linker.getNeighbors(), new Node(nodeId));
-    } 
-    
     
     private void writeToFile(String address, String state){
     	File f = new File(address);
@@ -233,5 +240,14 @@ public class RecvCamera extends MAP implements Camera, CamUser {
 			System.out.println(e.getMessage());
 		}
     }
+    
+    /**
+     * Helper function convert node id to channel index.
+     * @param nodeId
+     * @return
+     */
+    private int idToIndex(int nodeId){
+        return Collections.binarySearch(linker.getNeighbors(), new Node(nodeId));
+    } 
     
 }

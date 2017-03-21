@@ -3,9 +3,10 @@ package aos;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import clock.VectorClock;
-import helpers.Linker;
+import socket.Linker;
 
 
 /**
@@ -15,19 +16,29 @@ import helpers.Linker;
  */
 public class SpanTree extends Process {
     
+    /**
+     * Parent node id, -1 if no parent assigned
+     */
     private int parent = -1;    // No parent yet
-    private ArrayList<Integer> children = new ArrayList<>();
     
-    private int numReports = 0;        // Message received from neighbors
+    /**
+     * Children list
+     */
+    private List<Integer> children;
+    
+    /**
+     * Message received from neighbors
+     */
+    private int numReports = 0;         
     
     /**
      * Indicate whether tree constructed or not
      */
     private boolean isTreeConstructed = false;
     
-    
-    
-    // Broadcast Convergecast Controls
+    /**
+     * List of children that not yet send converge cast message
+     */
     private ArrayList<Integer> pending = new ArrayList<>();
     
     /**
@@ -43,12 +54,12 @@ public class SpanTree extends Process {
      * 
      */
     private boolean isAwake = false;
-
     
     public SpanTree(Linker initLinker){
         super(initLinker);
-        boolean isRoot = (myId == 0);
+        this.children = new ArrayList<>();
         reset();
+        boolean isRoot = (myId == 0);
         if (isRoot){
             parent = initLinker.getMyId();
             if(initLinker.getNeighbors().size() == 0){
@@ -120,7 +131,9 @@ public class SpanTree extends Process {
             logInfo = String.format("[Node %d] [Tree] Children Done. Cast to Parent(%d) %s\n", myId, parent, Arrays.toString(snapshotForMap));
             System.out.println(logInfo);
                         
-            sendMessageWithVector(parent, Tag.TREE_CONVERGE, "", snapshotList.get(snapshotIndex));
+            Message message = new Message(myId, parent, Tag.TREE_CONVERGE, "Snapshot");
+            message.setMapState(snapshotList.get(snapshotIndex));
+            sendMessage(parent, message);
         }   
         snapshotIndex++;
         
@@ -136,7 +149,7 @@ public class SpanTree extends Process {
         String logInfo;
         int[] globalMapState = snapshotList.get(snapshotIndex);
         int terminationCount = 0;
-        for (int i = 0; i < globalMapState.length - 1; i++){
+        for (int i = 0; i < globalMapState.length; i++){
             if (globalMapState[i] == 1){
                 logInfo = String.format("[Node %d] [SNAPSHOT] ++++++++++ Node %d Termination Detected ++++++++++", myId, i);
                 System.out.println(logInfo);
@@ -157,7 +170,6 @@ public class SpanTree extends Process {
     /**
      * Block till tree was constructed
      * 
-     * @throws InterruptedException
      */
     public synchronized void waitForDone () throws InterruptedException { 
         while (!isTreeConstructed){
@@ -196,20 +208,17 @@ public class SpanTree extends Process {
     
 
     /**
-     * Handle message carring tag TREE_CONVERGECAST
-     * @param msg
-     * @param srcId
-     * @param tag
-     * @throws IOException
+     * Handle message carrying tag TREE_CONVERGECAST
      */
     public synchronized void handleConvergeCast(Message msg, int srcId, Tag tag) throws IOException{
         while (!pendingSet) {
             procWait();
         }
         
-        System.out.println(String.format("[Node %d] [Tree] Collect Snapshot from %d %s", myId, msg.getSrcId(), Arrays.toString(msg.getVector()) ));
+        System.out.println(String.format("[Node %d] [Tree] Collect Snapshot from %d %s", 
+                myId, msg.getSrcId(), Arrays.toString(msg.getMapState())));
         
-        VectorClock.flatMerge(snapshotList.get(snapshotIndex), msg.getVector());
+        VectorClock.flatMerge(snapshotList.get(snapshotIndex), msg.getMapState());
 
         pending.remove(new Integer(srcId));
         if (pending.isEmpty()){
@@ -218,7 +227,9 @@ public class SpanTree extends Process {
         
     }
     
-    // Only received broadcast from parent
+    /**
+     * Only received broadcast from parent
+     */
     public synchronized void handleBroadCast(Message msg, int srcId, Tag tag) throws IOException{
         // Receive signal from parent, resume computeGlobal()
         isAwake = true;
@@ -230,6 +241,9 @@ public class SpanTree extends Process {
         }
     }
     
+    /**
+     * Handle span tree construction Invitation message
+     */
     private synchronized void handleInvitation(Message msg, int srcId, Tag tag) throws IOException{
      // If the parent reference not set yet.
         if (parent == -1) {
@@ -249,14 +263,17 @@ public class SpanTree extends Process {
         }
     }
     
- // Handle Accept and Reject messages.
+    /**
+     * Handle Accept and Reject messages.
+     */
     private synchronized void handleInvitationReponse(Message msg, int srcId, Tag tag) throws IOException{
         numReports++;
         if (tag.equals(Tag.TREE_ACCEPT))
             children.add(srcId);
         if (numReports == numProc) {
             isTreeConstructed = true;
-            System.out.println(String.format("[Node %d] [SpanTree Constructed %d/%d] Parent=%d Children=%s", myId, numReports, numProc, parent, children.toString()));
+            System.out.println(String.format("[Node %d] [SpanTree Constructed %d/%d] Parent=%d Children=%s",
+                    myId, numReports, numProc, parent, children.toString()));
             notify();    // Notify wait for done.
         }
     }

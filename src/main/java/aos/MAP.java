@@ -3,11 +3,12 @@ package aos;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
-import helpers.Linker;
+import clock.VectorClock;
+import helpers.PropConst;
+import socket.Linker;
 
 /**
  * The MAP protocol class
@@ -20,11 +21,6 @@ public class MAP extends SpanTree{
     public static final boolean PASSIVE = false;
     
     /**
-     * Logic Clock
-     */
-    private static int scalarClock = 0;
-    
-    /**
      * Number of messages have been sent
      */
     private volatile static int messageSentCount = 0;
@@ -34,10 +30,6 @@ public class MAP extends SpanTree{
      */
     protected volatile boolean state = false;
     
-    /**
-     * Previous node state.
-     */
-    protected volatile boolean prevState = false;
     
     /**
      * A latch to control send event. Count down when current node receives a message from a peer.
@@ -64,13 +56,14 @@ public class MAP extends SpanTree{
      */
     public final int MIN_SEND_DELAY; 
     
-    public MAP(Linker link, Map<PropertyType, Integer> globalParams){
+    public MAP(Linker link){
         super(link);
-        this.MAX_NUMBER = globalParams.get(PropertyType.MAX_NUMBER);
-        this.MIN_PER_ACTIVE = globalParams.get(PropertyType.MIN_PER_ACTIVE);
-        this.MAX_PER_ACTIVE = globalParams.get(PropertyType.MAX_PER_ACTIVE);
-        this.MIN_SEND_DELAY = globalParams.get(PropertyType.MIN_SEND_DELAY);
-        this.state = (globalParams.get(PropertyType.LOCAL_STATE) == 1);
+        
+        this.MAX_NUMBER = Integer.parseInt(prop.getProperty(PropConst.MAX_NUMBER));
+        this.MIN_PER_ACTIVE = Integer.parseInt(prop.getProperty(PropConst.MIN_PER_ACTIVE));
+        this.MAX_PER_ACTIVE = Integer.parseInt(prop.getProperty(PropConst.MAX_PER_ACTIVE));
+        this.MIN_SEND_DELAY = Integer.parseInt(prop.getProperty(PropConst.MIN_SEND_DELAY));
+        this.state = (Integer.parseInt(prop.getProperty(PropConst.LOCAL_STATE)) == 1);
         this.latch = new CountDownLatch(1);
     }
     
@@ -85,20 +78,19 @@ public class MAP extends SpanTree{
     public void sendApplicationMessage() throws IOException, InterruptedException {
         // Init each interval
         latch = new CountDownLatch(1);       // reset latch
-//        prevState = PASSIVE;
         
         List<Integer> sendList = generateSendList();
         
         
         System.out.format("[Node %d] [MAP] Send messages to %s\n", myId, sendList.toString());
         
-        for(int dstId : sendList){
-            scalarClock++;
-            sendMessageWithScalar(dstId, Tag.APP, "", scalarClock);
+        for(int dstId : sendList){            
+            mutex.acquire();
+            sendApplicatonMessage(dstId, "Application");
+            mutex.release();
+            
             messageSentCount++;
             Thread.sleep(MIN_SEND_DELAY);
-            System.out.println(String.format( "[Node %d] [MAP] [From %d to %d] [ScalarClock %d]\n",
-                    myId, myId, dstId, scalarClock ));
         }
         
         state = PASSIVE;
@@ -107,13 +99,10 @@ public class MAP extends SpanTree{
     }
     
     
-    
-    //handle messages
     @Override
-    public void handleMessage(Message msg, int srcId, Tag tag) throws IOException{
+    public synchronized void handleMessage(Message msg, int srcId, Tag tag) throws IOException{
         switch (tag){
             case APP:
-                vClock.tick();
                 handleApplicationMessage(msg, srcId, tag);
                 break;
             default: // Pass message to deeper layer
@@ -121,32 +110,55 @@ public class MAP extends SpanTree{
         }
     }
     
-    
+    /**
+     * Handle application messages
+     * @param msg
+     * @param srcId
+     * @param tag
+     */
     public void handleApplicationMessage(Message msg, int srcId, Tag tag){
-        if (messageSentCount < MAX_NUMBER) {              // Qualified to send message 
+        System.out.println(String.format( "[Node %d] [MAP] [RECV] From %d] [Vector = %s] \n", myId, srcId, vClock.toString()));
+        
+        // Handle vector clock first
+        vClock.receiveAction(msg.getVectorClock());
+        
+        if (messageSentCount < MAX_NUMBER) {   // Qualified to send message 
             if (state == PASSIVE) {
                 state = ACTIVE;
                 latch.countDown();
                 System.out.println(String.format("[Node %d] [MAP] State has been changed to active.\n", myId));
-                receiveAction(msg.getScalar());
             } else {                           // Received message whilst being active 
-                System.out.println(String.format("[Node %d] [MAP] Receive message when active %s\n",myId, msg.toString()));
-                // prevState = ACTIVE;                
+                System.out.println(String.format("[Node %d] [MAP] Receive message when active %s\n",myId, msg.toString()));                
             }
             
         }
-        // Ignore the messages if out of message quota
+       
+        // Ignore the messages if exceed MAX_NUMBER
     }
     
     
-    // Randomly choose neighbor to send msgs
+    public synchronized void sendApplicatonMessage(int dstId, String content) throws IOException{
+        vClock.sendAction();
+        Message message = new Message(myId, dstId, Tag.APP, content, new VectorClock(vClock));
+        sendMessage(dstId, message);
+    }
+    
+    
+    /**
+     * Randomly choose neighbor to send messages
+     * 
+     * @param neighbors
+     * @return
+     */
     public Node chooseNeighbor(List<Node> neighbors) {
         Random random = new Random();
         return neighbors.get(random.nextInt(neighbors.size()));
     }
     
-    
-    //randomly choose how many massages will be sent
+    /**
+     * Randomly choose how many massages will be sent 
+     * @return
+     */
     public int setRoundNum() {
         Random random = new Random();
         int max = MAX_PER_ACTIVE;
@@ -168,13 +180,7 @@ public class MAP extends SpanTree{
             numMsg --;
         }
         return sendList;
-    }
-    
-    //get clock value
-    public int getClock() {
-        return scalarClock;
-    }
-    
+    }    
     
     //determine stop or not
     public boolean isStop()  {
@@ -187,11 +193,6 @@ public class MAP extends SpanTree{
         }
     }
     
-    //clock action for receive 
-    public void receiveAction(int sClock) {
-        scalarClock =  Math.max(scalarClock, sClock);  
-    }
-    
     /**
      * Check node status
      * @return
@@ -200,16 +201,11 @@ public class MAP extends SpanTree{
         return state;
     }
     
+    /**
+     * Wait for incoming APP message to invoke this node
+     * @throws InterruptedException
+     */
     public void await() throws InterruptedException{
         latch.await();
-    }
-
-
-    /**
-     * Retrieve previous state
-     * @return
-     */
-    public boolean isPrevActive() {
-        return prevState;
     }
 }

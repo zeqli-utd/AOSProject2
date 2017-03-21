@@ -6,7 +6,7 @@ package aos;
  *
  */
 public enum Tag {
-    VECTOR,
+    DEFAULT,
     SETUP,
     MARKER,
     APP,

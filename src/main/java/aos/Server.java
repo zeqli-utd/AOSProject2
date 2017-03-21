@@ -6,14 +6,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import helpers.ConfigurationLoader;
-import helpers.Linker;
 import helpers.MAPConfigurationLoader;
 import helpers.ProcessFactory;
-import helpers.RKey;
+import helpers.PropConst;
 import helpers.Registry;
-import helpers.Repository;
 import snapshot.RecvCamera;
 import snapshot.SnapshotThread;
+import socket.Linker;
 /**
  * 
  * @author Zeqing Li, The University of Texas at Dallas
@@ -36,20 +35,19 @@ public class Server {
         int myId = Integer.parseInt(args[1]);
         String relativePath = args[2];
         
-        /* Load configuration file */
-        Repository registry = new Registry();   // Manage system variables              
+        /* Load configuration file */    
+        Registry registry = Registry.getInstance();
         ConfigurationLoader configLoader = 
-                new MAPConfigurationLoader(registry);
+                new MAPConfigurationLoader();
         
         // load List<Node> neighbors
-        // load GlobalParams;
         configLoader.loadConfig(relativePath, myId);
         
         try {
             
             // 1. Setup registry.
             @SuppressWarnings("unchecked")
-            List<Node> neighbors = (List<Node>) registry.getObject(RKey.KEY_NEIGHBORS.name());
+            List<Node> neighbors = (List<Node>) registry.getObject(PropConst.NEIGHBORS);
             Linker linker = new Linker(myId, neighbors);
             linker.buildChannels(port);
             registry.addLinker(linker);
@@ -72,7 +70,6 @@ public class Server {
             // 4. Setup Chandy Lamport Protocol
             SnapshotThread chandyLamportProtocol = new SnapshotThread(myId, proc);
             executorService.execute(chandyLamportProtocol);
-            Thread.sleep(5000);
            
             // 5. Setup MAP protocol
             MAPThread mapProtocol = new MAPThread(myId, proc);

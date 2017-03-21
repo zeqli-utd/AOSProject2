@@ -7,20 +7,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-import aos.PropertyType;
 import aos.Node;
 
 public class MAPConfigurationLoader implements ConfigurationLoader {
-    Repository repo;
+    Registry prop = null;
     
-    public MAPConfigurationLoader(Repository repo){
-        this.repo = repo;
+    public MAPConfigurationLoader(){
+        this.prop = Registry.getInstance();
     }
     
     public void loadConfig(String relativePath, int myId){
@@ -31,7 +28,6 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
     }
 
     public void loadConfigFromAbs(String absolutePath, int myId) {
-        Map<PropertyType, Integer> globalParams= new EnumMap<>(PropertyType.class);
         List<Node> hosts = new LinkedList<>();
         List<Node> neighbors = new LinkedList<>();
         Path file = Paths.get(absolutePath);
@@ -39,10 +35,12 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
         // Store file name
         String filename = file.getFileName().toString();
         String fileDir = file.getParent().toString();
-        repo.putObject(RKey.KEY_CONFIG_FILE_NAME.name(), filename);
-        repo.putObject(RKey.KEY_CONFIG_FILE_DIRECTORY.name(), fileDir);
-        System.out.println(filename);
-        System.out.println(fileDir);
+        prop.setProperty(PropConst.CONFIG_FILE_NAME, filename);
+        prop.setProperty(PropConst.CONFIG_FILE_DIRECTORY, fileDir);
+        
+
+        System.out.println(String.format("%s = %s\n", PropConst.CONFIG_FILE_NAME,filename));
+        System.out.println(String.format("%s = %s\n", PropConst.CONFIG_FILE_DIRECTORY,fileDir));
         
         
         
@@ -59,7 +57,6 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 if(line.length() == 0)             // Skip empty lines
                     continue;
                 String[] params = line.split("\\s+"); // Split to read parameters
-                
                 /*
                  * 0 NUM_NODES,          // "Number of Nodes";
                  * 1 MIN_PER_ACTIVE,     // "Minimum number of active node at each round";
@@ -69,16 +66,20 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                  * 5 MAX_NUMBER,         // "Maximum messages a node can send in its life cycle";
                  * 6 LOCAL_STATE;        // "Local state: active or passive";
                  */
-                for (int i = 0; i < params.length + 1; i++){
-                     if (i == params.length) {
-                        
-                     } else {
-                        int value = Integer.parseInt(params[i]);
-                         PropertyType key = PropertyType.values()[i];
-                         globalParams.put(key, value);
-                         logger.append(String.format("%s = %d\n", key, value));
-                     }
-                }
+
+                prop.setProperty(PropConst.NUM_NODES, params[0]);
+                prop.setProperty(PropConst.MIN_PER_ACTIVE, params[1]);
+                prop.setProperty(PropConst.MAX_PER_ACTIVE, params[2]);
+                prop.setProperty(PropConst.MIN_SEND_DELAY, params[3]);
+                prop.setProperty(PropConst.SNAP_SHOT_DELAY, params[4]);
+                prop.setProperty(PropConst.MAX_NUMBER, params[5]);
+                
+                logger.append(String.format("%s = %s\n", PropConst.NUM_NODES, params[0]));
+                logger.append(String.format("%s = %s\n", PropConst.MIN_PER_ACTIVE, params[1]));
+                logger.append(String.format("%s = %s\n", PropConst.MAX_PER_ACTIVE, params[2]));
+                logger.append(String.format("%s = %s\n", PropConst.MIN_SEND_DELAY, params[3]));
+                logger.append(String.format("%s = %s\n", PropConst.SNAP_SHOT_DELAY, params[4]));
+                logger.append(String.format("%s = %s\n", PropConst.MAX_NUMBER, params[5]));
                 
                 
                 
@@ -86,14 +87,14 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 // nextInt is normally exclusive of the top value,
                 // so add 1 to make it inclusive
                 // Always set node 0 as active
-                int value = (myId == 0) ? 1 : ThreadLocalRandom.current().nextInt(0, 2);
-                PropertyType key = PropertyType.LOCAL_STATE;
-                globalParams.put(key, value);
-                logger.append(String.format("%s = %d\n", key, value));
+                
+                int initState = (myId == 0) ? 1 : ThreadLocalRandom.current().nextInt(0, 2);
+                prop.setProperty(PropConst.LOCAL_STATE, Integer.toString(initState));
+                logger.append(String.format("%s = %d\n", PropConst.LOCAL_STATE, initState));
                 break;
             }
-            
-            n = globalParams.get(PropertyType.NUM_NODES);
+
+            n =  Integer.parseInt(prop.getProperty(PropConst.NUM_NODES));
             
             // Load host list.
             while (n != 0 && (line = reader.readLine()) != null) {
@@ -110,11 +111,9 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 hosts.add(host);
                 n--;
             }
-            if(n != 0){
-                throw new IOException("Insufficent valid lines in config file.");
-            }
+            validateConfigurationFile(n);
             
-            n = globalParams.get(PropertyType.NUM_NODES);
+            n = Integer.parseInt(prop.getProperty(PropConst.NUM_NODES));
             
             // Load neighbors
             while (n != 0 && (line = reader.readLine()) != null) {
@@ -123,7 +122,7 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 if(line.length() == 0)
                     continue;
                 String[] neighborIds = line.split("\\s+");
-                int currentId = globalParams.get(PropertyType.NUM_NODES) - n;
+                int currentId = Integer.parseInt(prop.getProperty(PropConst.NUM_NODES)) - n;
                 
                 if(currentId == myId){
                     for(int i = 0; i < neighborIds.length; i++){
@@ -134,12 +133,13 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
                 }
                 n--;
             }
-            if(n != 0){
-                throw new IOException("Insufficent valid lines in config file.");
-            }
+            
+            validateConfigurationFile(n);
+            
+            doConfigure(neighbors);
             
             System.out.println(logger.toString());
-            doConfigure(globalParams, neighbors);
+            
             
         } catch (IOException x) {
             System.err.format("IOException: %s%n", x);
@@ -148,9 +148,14 @@ public class MAPConfigurationLoader implements ConfigurationLoader {
         }
     }
     
-    public void doConfigure(Map<PropertyType, Integer> globalParams, List<Node> neighbors){
+    public void doConfigure(List<Node> neighbors){
         Collections.sort(neighbors);
-        repo.putObject(RKey.KEY_NEIGHBORS.name(), neighbors);
-        repo.putObject(RKey.KEY_GLOB_PARAMS.name(), globalParams);
+        prop.putObject(PropConst.NEIGHBORS, neighbors);
+    }
+    
+    private void validateConfigurationFile(int n) throws IOException{
+        if(n != 0){
+            throw new IOException("Insufficent valid lines in config file.");
+        }
     }
 }

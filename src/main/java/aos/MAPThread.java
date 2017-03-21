@@ -23,12 +23,6 @@ public class MAPThread implements Runnable {
                 if (!process.isActive()){
                     process.await();
                 }
-//                if (process.isPrevActive()){
-//                    System.out.format(
-//                            "[Node %d] [MAP] Consecutive Active Delay %sms",
-//                            myId, process.MIN_SEND_DELAY);
-//                    Thread.sleep(process.MIN_SEND_DELAY);
-//                }
                 process.sendApplicationMessage();            
             }
             

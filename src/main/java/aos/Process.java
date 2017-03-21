@@ -6,18 +6,19 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import clock.VectorClock;
-import helpers.Linker;
-import helpers.Repository;
+import helpers.Registry;
+import socket.Linker;
 
 public class Process implements MessageHandler{
     protected int numProc, myId;
     protected Linker linker;
+    
     protected VectorClock vClock;         // Vector Clock
     
     /**
      * Central repository to retrieve and store helpful settings
      */
-    protected Repository registry;
+    protected Registry prop;
     
     /**
      * Snapshot for termination detection
@@ -41,6 +42,8 @@ public class Process implements MessageHandler{
      */
     protected Semaphore snapshotPermission;
     
+    protected Semaphore mutex;
+    
     /**
      * Snapshot history, supplied by RecvCamera
      */
@@ -52,6 +55,8 @@ public class Process implements MessageHandler{
     protected int snapshotIndex;
     
     public Process(Linker initLinker){
+        this.prop = Registry.getInstance();
+        
         this.linker = initLinker;
         this.myId = linker.getMyId();
         this.numProc = linker.getNeighbors().size();  
@@ -59,6 +64,7 @@ public class Process implements MessageHandler{
         this.snapshotPermission = new Semaphore(1);
         this.snapshotList = new ArrayList<>();
         this.snapshotIndex = 0;
+        this.mutex = new Semaphore(1);
     }
     
     /**
@@ -83,31 +89,13 @@ public class Process implements MessageHandler{
      * @param content
      * @throws IOException
      */
-    public void sendMessage(int dstId, Tag tag, String content) throws IOException{
-        if (tag.equals(Tag.APP)){
-            vClock.sendAction();
-            linker.sendMessage(dstId, tag, content, vClock.getVector());
-        } else {
-            linker.sendMessage(dstId, tag, content);
-        }
+    public synchronized void sendMessage(int destination, Tag tag, String content) throws IOException{
+        Message message = new Message(myId, destination, tag, content);
+        linker.sendMessage(destination, message);
     }
     
-    public void sendMessageWithVector(int dstId, Tag tag, String content, int[] vector) throws IOException{
-        if (tag.equals(Tag.APP)){
-            vClock.sendAction();
-            linker.sendMessage(dstId, tag, content, vClock.getVector());
-        } else {
-            linker.sendMessage(dstId, tag, content, vector);
-        }
-    }
-    
-    public void sendMessageWithScalar(int dstId, Tag tag, String content, int scalarClock) throws IOException{
-        if (tag.equals(Tag.APP)){
-            vClock.sendAction();
-            linker.sendMessage(dstId, tag, content, scalarClock, vClock.getVector());
-        } else {
-            linker.sendMessage(dstId, tag, content, scalarClock);
-        }
+    public synchronized void sendMessage(int destination, Message message) throws IOException{
+        linker.sendMessage(destination, message);
     }
     
     /**
@@ -116,7 +104,7 @@ public class Process implements MessageHandler{
      * @param content
      * @throws IOException
      */
-    public void sendToNeighbors(Tag tag, String content) throws IOException{
+    public synchronized void sendToNeighbors(Tag tag, String content) throws IOException{
         List<Node> neighbors = linker.getNeighbors();
         linker.multicast(neighbors, tag, content);
     }
@@ -128,8 +116,6 @@ public class Process implements MessageHandler{
     public Message receiveMessage(int fromId) throws IOException{
         try{
             Message message = linker.receiveMessage(fromId);
-            if (message.getTag().equals(Tag.APP))
-                vClock.receiveAction(message.getVector());
             return message;
         } catch (ClassNotFoundException e){
             e.printStackTrace();
@@ -168,10 +154,6 @@ public class Process implements MessageHandler{
     
     public synchronized void setVectorClock(VectorClock v) {
         this.vClock = v;
-    }
-    
-    public synchronized void setRegistry(Repository registry){
-        this.registry = registry;
     }
     
     /**

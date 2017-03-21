@@ -1,8 +1,14 @@
 package clock;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
-public class VectorClock {
+public class VectorClock implements Serializable{
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -7676287670170133745L;
+    
     private int[] v;
     private int id;
     private int topologySize;
@@ -15,7 +21,7 @@ public class VectorClock {
     public VectorClock(int tSize, int id){
         this.id = id;
         this.topologySize = tSize;
-        this.v = new int[topologySize + 1];
+        this.v = new int[topologySize];
         v[id] = 1;
     }
     
@@ -36,13 +42,20 @@ public class VectorClock {
     }
     
     public void sendAction(){
-        // include the vector in the message
         v[id]++;
     }
     
     public void receiveAction(int[] sentValue){
-        for(int i = 0; i <= topologySize; i++){
+        for(int i = 0; i < topologySize; i++){
             v[i] = Math.max(v[i], sentValue[i]);
+        }
+        v[id]++;
+    }
+    
+    public void receiveAction(VectorClock other){
+        int[] otherVector = other.getVector();
+        for(int i = 0; i < topologySize; i++){
+            v[i] = Math.max(v[i], otherVector[i]);
         }
         v[id]++;
     }
@@ -108,11 +121,11 @@ public class VectorClock {
 
     @Override
     public String toString(){
-        return String.format("ProcessId = %d, Vector %s", id, Arrays.toString(v));
+        return String.format("Pid = %d, Vector %s", id, Arrays.toString(v));
     }
     
     public String formatToOutput(){
-        int[] out = Arrays.copyOf(v, v.length - 1);
+        int[] out = getVector();
         StringBuilder sb = new StringBuilder();
         for (int i : out){
             sb.append(i).append(" ");

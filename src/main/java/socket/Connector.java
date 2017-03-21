@@ -1,4 +1,4 @@
-package helpers;
+package socket;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -59,11 +59,13 @@ public class Connector {
         
         int numProc = processes.size();
         link = new Socket[numProc];
+
+        System.out.println(String.format("[Node %d] [Connect: Phase 0] Setup Server at port %d", myId, listenPort));
         listener = new ServerSocket(listenPort);
         
         /* Accept connections from all the smaller processes */
         int numRecved = 0;
-        System.out.println(String.format("[Node %d] [Connect: Phase 0] Targets: ", myId, processes.toString()));
+        System.out.println(String.format("[Node %d] [Connect: Phase 0] Targets: %s", myId, processes.toString()));
         
         while(numRecved < processes.size() && processes.get(numRecved).getNodeId() < myId){
             System.out.println(String.format("[Node %d] [Connect:Phase 1] Status: numRecved %d, nodeId %d",  myId, numRecved, processes.get(numRecved).getNodeId()));

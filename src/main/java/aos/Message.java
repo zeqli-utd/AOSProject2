@@ -1,7 +1,8 @@
 package aos;
 
 import java.io.Serializable;
-import java.util.Arrays;
+
+import clock.VectorClock;
 
 /**
  * 
@@ -14,10 +15,11 @@ public class Message implements Serializable{
     
     private int srcId;
     private int dstId;
-    private Tag tag;
-    private int[] v = new int[0];   // Vector Clock
-    private int scalar;             // Scalar Clock
     private String content;
+    
+    private Tag tag;
+    private VectorClock vector = null;
+    private int[] mapState = null;
     
     /**
      * Constructor for application message
@@ -29,7 +31,7 @@ public class Message implements Serializable{
     public Message(int srcId, int dst, String content){
         this.srcId = srcId;
         this.dstId = dst;
-        this.tag = Tag.APP;
+        this.tag = Tag.DEFAULT;
         this.content = content;
     }
     
@@ -43,6 +45,12 @@ public class Message implements Serializable{
     public Message(int src, int dst, Tag tag, String content){
         this(src, dst, content);
         setTag(tag);
+    }
+    
+    public Message(int src, int dst, Tag tag, String content, VectorClock vector){
+        this(src, dst, content);
+        setTag(tag);
+        setVectorClock(vector);
     }
     
     
@@ -71,13 +79,22 @@ public class Message implements Serializable{
     public void setTag(Tag tag) {
         this.tag = tag;
     }
-
-    public int[] getVector() {
-        return v;
+    
+    public VectorClock getVectorClock(){
+        return this.vector;
+    }
+    
+    public void setVectorClock(VectorClock vector) {
+        this.vector = vector;
+    }
+    
+    
+    public int[] getMapState() {
+        return mapState;
     }
 
-    public void setVector(int[] v) {
-        this.v = v;
+    public void setMapState(int[] mapState) {
+        this.mapState = mapState;
     }
 
     public String getContent() {
@@ -87,25 +104,20 @@ public class Message implements Serializable{
     public void setContent(String content) {
         this.content = content;
     }
-    
-    
-    
-    public int getScalar() {
-        return scalar;
-    }
 
-    public void setScalar(int scalar) {
-        this.scalar = scalar;
-    }
-
-    public boolean containsVector(){
-        return (v.length != 0);
+    public boolean containsVectorClock(){
+        return (vector != null);
     }
 
     @Override 
     public String toString(){
-        return String.format("[%s] SOURCE = %d DST = %d CONTENT = \"%s\" SCALAR = %d VECTOR = %s", 
-                tag, this.srcId, this.dstId, this.content, this.scalar, Arrays.toString(v));
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("[%s] SOURCE = %d DST = %d CONTENT = \"%s\" ", 
+                tag, this.srcId, this.dstId, this.content));
+        if (vector != null){
+            sb.append(String.format("VECTOR %s", vector.toString()));
+        }
+        return sb.toString();
     }
 
 

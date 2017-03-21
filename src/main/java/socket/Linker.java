@@ -1,4 +1,4 @@
-package helpers;
+package socket;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -52,25 +52,10 @@ public class Linker {
      * @throws IOException 
      */
     public synchronized void sendMessage(int dstId, Tag tag, String content) throws IOException{
-        sendMessage(dstId, tag, content, -1, new int[0]);
+        sendMessage(dstId, new Message(myId, dstId, tag, content));
     }
     
-    public synchronized void sendMessage(int dstId, Tag tag, String content, int scalarClock) throws IOException{
-        sendMessage(dstId, tag, content, scalarClock, new int[0]);
-    }
-    
-    public synchronized void sendMessage(int dstId, Tag tag, String content, int[] vector) throws IOException{
-        sendMessage(dstId, tag, content, -1, vector);
-    }
-    
-    public synchronized void sendMessage(int dstId, Tag tag, String content, int scalar, int[] vector) throws IOException{
-        Message message = new Message(myId, dstId, tag, content);
-        message.setVector(vector);
-        message.setScalar(scalar);
-        sendMessage(dstId, message);
-    }
-    
-    private synchronized void sendMessage(int dstId, Message message) throws IOException{
+    public synchronized void sendMessage(int dstId, Message message) throws IOException{
         int dstIndex = idToIndex(dstId);
         out[dstIndex].writeObject(message);
     }
