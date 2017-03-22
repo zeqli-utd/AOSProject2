@@ -104,6 +104,7 @@ public class SpanTree extends Process {
             while (!isAwake){
                 procWait(); // Thread awake by parent's broadcast message 
             }
+            System.out.println(String.format("[Node %d] [Tree] Waked up success", myId));
         }
         // Check SnapshotListSize
         logInfo = String.format("[Node %d] [Tree] %d Snapshot Taken, Collecting Snapshot-%d... \n", myId, snapshotList.size(), snapshotIndex);
@@ -234,6 +235,7 @@ public class SpanTree extends Process {
         // Receive signal from parent, resume computeGlobal()
         isAwake = true;
         notifyAll();
+        System.out.println(String.format("[Node %d] [Tree] Recv Broadcast from %d, wake up to collect snapshot", myId, msg.getSrcId()));
         
         // Non-root node
         if (parent != myId) {
@@ -260,6 +262,12 @@ public class SpanTree extends Process {
         } else {
             // If the parent reference already set. Reject the request
             sendMessage(srcId, Tag.TREE_REJECT, "Reject");
+        }
+        if (numReports == numProc) {
+            isTreeConstructed = true;
+            System.out.println(String.format("[Node %d] [SpanTree Constructed %d/%d] Parent=%d Children=%s",
+                    myId, numReports, numProc, parent, children.toString()));
+            notify();    // Notify wait for done.
         }
     }
     

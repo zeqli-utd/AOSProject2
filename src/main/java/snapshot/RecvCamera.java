@@ -184,7 +184,9 @@ public class RecvCamera extends MAP implements Camera, CamUser {
      * @throws InterruptedException
      */
     public void waitForSnapshotDone() throws InterruptedException{
+        System.out.println(String.format("[Node %d] [Snapshot] Wait for snapshot done.", myId));
         available.acquire();
+        System.out.println(String.format("[Node %d] [Snapshot] Done. Available for collecting. ", myId));
     }
     
     
