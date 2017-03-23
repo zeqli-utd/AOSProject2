@@ -1,0 +1,27 @@
+# six global parameters (see above )
+11 6 10 100 2000 30
+0 dc02 60000 # nodeID hostName l i s t e n P o r t
+1 dc03 60001
+2 dc04 60002
+3 dc05 60003
+4 dc06 60004
+5 dc07 60005
+6 dc08 60006
+7 dc09 60007
+8 dc10 60008
+9 dc11 60009
+10 dc12 60010
+
+
+
+1 # . . .node 0
+0 2 # . . . node 1
+1 3 # . . . node 2
+2 4 # . . . node 3
+3 5 # . . . node 4
+4 6 # . . . node 5
+5 7 # . . . node 6
+6 8 # . . . node 7
+7 9 # . . . node 8
+8 10 # . . .node 9
+9  # . . . node 10

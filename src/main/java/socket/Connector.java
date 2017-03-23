@@ -1,5 +1,6 @@
 package socket;
 
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ConnectException;
@@ -48,6 +49,9 @@ public class Connector {
      * @param in
      * @param out
      * @param processes Sorted list of nodes containing nodeId, host address, and port.
+     * @throws IOException 
+     * @throws ClassNotFoundException 
+     * @throws InterruptedException 
      * @throws Exception
      */
     public void connect(
@@ -55,7 +59,7 @@ public class Connector {
             int myId, 
             ObjectInputStream[] in, 
             ObjectOutputStream[] out, 
-            List<Node> processes) throws Exception{
+            List<Node> processes) throws IOException, ClassNotFoundException, InterruptedException {
         
         int numProc = processes.size();
         link = new Socket[numProc];

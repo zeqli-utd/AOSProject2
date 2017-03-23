@@ -37,9 +37,12 @@ public class Linker {
     /**
      * Build bidirectional channels with all neighbors
      * @param listenPort
+     * @throws InterruptedException 
+     * @throws IOException 
+     * @throws ClassNotFoundException 
      * @throws Exception
      */
-    public void buildChannels(int listenPort) throws Exception{
+    public void buildChannels(int listenPort) throws ClassNotFoundException, IOException, InterruptedException {
         connector.connect(listenPort, myId, in, out, neighbors);
     }
     

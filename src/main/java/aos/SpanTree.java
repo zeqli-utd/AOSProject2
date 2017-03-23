@@ -172,7 +172,7 @@ public class SpanTree extends Process {
      * Block till tree was constructed
      * 
      */
-    public synchronized void waitForDone () throws InterruptedException { 
+    public synchronized void waitForTreeConstruction () throws InterruptedException { 
         while (!isTreeConstructed){
             procWait();
         }

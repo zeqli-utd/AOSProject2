@@ -1,19 +1,43 @@
-Author: Zeqing Li, zxl165030, The University of Texas at Dallas
+Authors:
+    Zeqing Li, The University of Texas at Dallas
+    Ming Sun, The University of Texas at Dallas
+    Jingyi Liu, The University of Texas at Dallas
 
 
 # Compile Instruction
-    $> javac -d bin src/main/java/aos/*.java src/main/java/clock/*.java src/main/java/snapshot/*.java 
 
+# Clear /bin directory 
+    $> rm -rf bin/*
+    
+# Compile project to ./bin folder
+    $> javac -d bin src/main/java/aos/*.java\
+                    src/main/java/clock/*.java \
+                    src/main/java/snapshot/*.java \
+                    src/main/java/helpers/*.java \
+                    src/main/java/socket/*.java
+    or simply run compile
     
     This should have no warnings or errors.
+    
+    
 
+# The default configuration path is ~/launcher/<config-file-name>.txt    
+    
 # Execute Instruction
 
-    $> ./aos.Server <port> <node ID> $HOME/launch/config.txt
+    $> ./launch.sh
     
     This tells the program which node it is.
+
+# Cleanup processes
+    $> ./cleanup.sh
     
     
+# The program will output files in $HOME directory ~
+# Caveat! Make sure cleanup or move the output to another places before doing next test.
+    
+    
+# The shell script might contains doc encoding instead of unix, to convert the format run the below command in Vim.    
 # Change shell script format
     :update
     :e ++ff=dos
@@ -22,20 +46,9 @@ Author: Zeqing Li, zxl165030, The University of Texas at Dallas
     
     Reference: http://vim.wikia.com/wiki/Change_end-of-line_format_for_dos-mac-unix
 
-# Configuration File Format
-
-    config.txt is formatted as:
-
-    <Size of network>
-
-    <node id 0> <host 0> <port 0>
-    <node id 0> <host 0> <port 0>
-    <node id 0> <host 0> <port 0>
-    <node id 0> <host 0> <port 0>
-    <node id 0> <host 0> <port 0>
-
-    <node id 0> <neighbor1 neighbor2 ...>
-    <node id 0> <neighbor1 neighbor2 ...>
-    <node id 0> <neighbor1 neighbor2 ...>
-    <node id 0> <neighbor1 neighbor2 ...>
-    <node id 0> <neighbor1 neighbor2 ...>
+    
+# Status Code
+    00 - PASSIVE, NON-EMPTY
+    01 - PASSIVE, EMPTY
+    10 - ACTIVE , NON-EMPTY
+    11 - ACTIVE , EMPTY    

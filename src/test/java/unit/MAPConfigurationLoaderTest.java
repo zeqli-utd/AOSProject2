@@ -7,13 +7,11 @@ import org.junit.Test;
 import helpers.ConfigurationLoader;
 import helpers.MAPConfigurationLoader;
 import helpers.Registry;
-import helpers.Repository;
 
 public class MAPConfigurationLoaderTest {
     /* Load configuration file */
-    Repository registry = new Registry();   // Manage system variables              
-    ConfigurationLoader configLoader = 
-            new MAPConfigurationLoader(registry);
+    Registry registry = Registry.getInstance();   // Manage system variables              
+    ConfigurationLoader configLoader = new MAPConfigurationLoader();
     
     @Test
     public void testConfig() {
